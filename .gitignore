@@ -8,8 +8,8 @@ dist/
 build/
 *.tsbuildinfo
 
-# app data (media + sqlite live here)
-server/data/
+# app data (media + sqlite live here) — ignore contents but keep the dir
+server/data/*
 !server/data/.gitkeep
 
 # env / secrets
