@@ -1,0 +1,26 @@
+# Keep the build context small and prevent host-built artifacts (esp. Windows
+# sharp binaries) from leaking into the linux image.
+.git
+.github
+.claude
+node_modules
+**/node_modules
+**/dist
+build
+*.tsbuildinfo
+
+# runtime data & secrets must never be baked into the image
+server/data
+.env
+**/.env
+*.local
+
+# logs & misc
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# docs not needed at runtime
+README.md
+Associated Guide/*.md

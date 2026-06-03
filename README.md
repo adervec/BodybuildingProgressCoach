@@ -1,5 +1,8 @@
 # Living Sculpture — Bodybuilding Progress Coach
 
+[![CI](https://github.com/adervec/BodybuildingProgressCoach/actions/workflows/ci.yml/badge.svg)](https://github.com/adervec/BodybuildingProgressCoach/actions/workflows/ci.yml)
+[![Publish Docker image](https://github.com/adervec/BodybuildingProgressCoach/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/adervec/BodybuildingProgressCoach/actions/workflows/docker-publish.yml)
+
 An honest, fair tracker for bodybuilding progress from your **photos and video** — covering
 both **physique** and **posing technique**, corroborated by **body-composition** data, with
 **progress timelapses**. The interface and the analysis rubric are both drawn directly from the
@@ -57,6 +60,27 @@ npm run build -w client     # outputs client/dist
 npm run dev:server          # the API server also serves the built client at http://localhost:8787
 ```
 
+### Production with Docker
+
+The repo ships a multi-stage `Dockerfile` that builds both workspaces and runs the single
+production process (API + built client + guides). Images are published to GHCR on every push to
+`main` (see [CI/CD](#continuous-integration--deployment)).
+
+```bash
+# Pull the published image (or `docker build -t bpc .` to build locally)
+docker run -d --name bpc \
+  -p 8787:8787 \
+  -v bpc-data:/app/server/data \                 # persists the SQLite db + uploaded media
+  ghcr.io/adervec/bodybuildingprogresscoach:latest
+
+# Optional: enable Claude coaching
+docker run -d --name bpc -p 8787:8787 -v bpc-data:/app/server/data \
+  -e ANTHROPIC_API_KEY=sk-ant-... \
+  ghcr.io/adervec/bodybuildingprogresscoach:latest
+```
+
+Then open **http://localhost:8787**. The container exposes a health check on `/api/status`.
+
 ---
 
 ## What's inside
@@ -100,6 +124,27 @@ npm run typecheck    # tsc on both workspaces
 npm run test         # geometry unit tests (vitest)
 npm run seed         # demo data
 ```
+
+## Continuous integration & deployment
+
+GitHub Actions handles both CI and image publishing:
+
+| Workflow | Trigger | What it does |
+|----------|---------|--------------|
+| **CI** (`.github/workflows/ci.yml`) | push / PR to `main` & `dev` | `npm ci` → `typecheck` → `test` → `build` on a Node **22.x + 24.x** matrix, then uploads `client/dist` as an artifact. |
+| **Publish Docker image** (`.github/workflows/docker-publish.yml`) | push to `main`, `v*.*.*` tags (PRs build-only) | Builds the production `Dockerfile` and pushes to **GHCR** (`ghcr.io/adervec/bodybuildingprogresscoach`), tagged `latest`, the branch/sha, and semver on tags. |
+
+`Dependabot` (`.github/dependabot.yml`) keeps the npm deps, GitHub Actions, and the Docker base
+image up to date weekly.
+
+**No extra secrets are required** — image publishing uses the built-in `GITHUB_TOKEN`. After the
+first successful publish, make the package public (or grant pull access) under the repo's
+**Packages** settings if you want to pull it without authenticating.
+
+**Deploying elsewhere.** The image runs anywhere that runs containers (Fly.io, Render, Railway, a
+VPS, etc.). Map a persistent volume to `/app/server/data` so the SQLite database and uploaded media
+survive restarts, publish port `8787`, and optionally set `ANTHROPIC_API_KEY`. To deploy
+automatically, add a deploy job to the publish workflow once you've chosen a host.
 
 ## Notes & roadmap
 
