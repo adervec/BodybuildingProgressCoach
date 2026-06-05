@@ -9,6 +9,9 @@ node_modules
 build
 *.tsbuildinfo
 
+# provisioned fresh in the build stage (WASM copied from node_modules, model downloaded)
+client/public/mediapipe
+
 # runtime data & secrets must never be baked into the image
 server/data
 .env

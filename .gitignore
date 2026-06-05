@@ -8,6 +8,10 @@ dist/
 build/
 *.tsbuildinfo
 
+# vendored MediaPipe assets (provisioned at build: WASM copied from node_modules,
+# pose model downloaded once). Served locally so the app makes no third-party calls.
+client/public/mediapipe/
+
 # app data (media + sqlite live here) — ignore contents but keep the dir
 server/data/*
 !server/data/.gitkeep

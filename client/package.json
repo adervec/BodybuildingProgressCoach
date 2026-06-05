@@ -5,7 +5,9 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/provision-mediapipe.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/provision-mediapipe.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",

@@ -153,9 +153,10 @@ automatically, add a deploy job to the publish workflow once you've chosen a hos
 
 ## Notes & roadmap
 
-- **MediaPipe model** is fetched once from a CDN on first analysis, then browser-cached. Inference
-  runs locally; photos are not uploaded for geometry analysis. (Vendor the model into `public/`
-  for fully offline first-run.)
+- **Self-hosted & offline.** The MediaPipe runtime + pose model and the web fonts are served from
+  the app's own origin (provisioned at build time), so the app makes **no third-party network
+  requests** and runs fully offline. Inference runs locally; photos are never uploaded for geometry
+  analysis.
 - **Reference-form angles are stylized** (drawn to teach shape), so that sub-score is directional;
   symmetry and proportions are the camera-robust headline metrics.
 - **Later:** smart-scale / Bluetooth import (schema already supports `source='scale'`), full video

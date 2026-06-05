@@ -53,18 +53,16 @@ machine-readable report can be regenerated at any time, e.g. with
 
 ---
 
-## Assets fetched at run time (not vendored)
+## Self-hosted assets (no third-party calls at runtime)
 
-| Asset | Source | License / terms |
+The app serves all of the following from its own origin, so it makes **no
+third-party network requests** at runtime:
+
+| Asset | License | How it's provided |
 |---|---|---|
-| **Web fonts** — Bodoni Moda, Spectral, DM Mono | Google Fonts API (`fonts.googleapis.com` / `fonts.gstatic.com`) | SIL Open Font License 1.1 (served by Google Fonts) |
-| **MediaPipe WASM runtime** | jsDelivr CDN (`@mediapipe/tasks-vision`) | Apache-2.0 |
-| **Pose landmarker model** (`pose_landmarker_lite.task`) | Google (`storage.googleapis.com/mediapipe-models/…`) | Apache-2.0 (Google MediaPipe model) — see the MediaPipe model card |
-
-Because these are fetched from third-party servers, the end user's browser/IP is
-exposed to those providers. To run fully offline and avoid that exposure, the
-fonts and model can be vendored into the app (see the roadmap in `README.md` and
-`PRIVACY.md`).
+| **Web fonts** — Bodoni Moda, Spectral, DM Mono | SIL Open Font License 1.1 | Committed under `client/public/fonts/` (latin + latin-ext `woff2`) with `OFL.txt`. Regenerate via `client/scripts/fetch-fonts.mjs`. |
+| **MediaPipe WASM runtime** | Apache-2.0 | Copied from the installed `@mediapipe/tasks-vision` package at build time by `client/scripts/provision-mediapipe.mjs` (not committed). |
+| **Pose landmarker model** (`pose_landmarker_lite.task`) | Apache-2.0 — Google MediaPipe model (see the model card) | Downloaded once at build time into `client/public/mediapipe/` (git-ignored; not committed). |
 
 ---
 

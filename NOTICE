@@ -15,10 +15,11 @@ CONDITIONS OF ANY KIND, either express or implied.
 
 Third-party components
 ----------------------
-This repository does not vendor (redistribute) any third-party source code,
-fonts, models, or media. Runtime and build-time dependencies are installed via
-npm, and some assets (web fonts, the MediaPipe WASM runtime, and the pose model)
-are fetched from third-party CDNs at run time. Their licenses and any required
+This repository bundles open-source web fonts (SIL Open Font License 1.1) under
+client/public/fonts/, and self-hosts the MediaPipe WASM runtime and pose model
+(provisioned at build time from the npm package and a one-time download). As a
+result the app makes no third-party network requests at run time. Other
+dependencies are installed via npm. Third-party licenses and any required
 attributions are summarized in THIRD-PARTY-NOTICES.md.
 
 Original guides

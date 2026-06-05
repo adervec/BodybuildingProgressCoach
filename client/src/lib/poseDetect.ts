@@ -1,10 +1,10 @@
 import { FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision';
 import type { Landmark } from './types';
 
-const VERSION = '0.10.18';
-const WASM_BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VERSION}/wasm`;
-const MODEL_URL =
-  'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
+// Self-hosted, same-origin assets — provisioned into client/public/mediapipe by
+// scripts/provision-mediapipe.mjs (see the "predev"/"prebuild" hooks). No CDN calls.
+const WASM_BASE = `${import.meta.env.BASE_URL}mediapipe/wasm`;
+const MODEL_URL = `${import.meta.env.BASE_URL}mediapipe/models/pose_landmarker_lite.task`;
 
 let landmarkerPromise: Promise<PoseLandmarker> | null = null;
 
