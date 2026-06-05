@@ -2,6 +2,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useApp } from '../state/store';
 import { categoryLabel } from '../lib/poses';
 import { Icon } from './Icon';
+import { DisclaimerNotice, openDisclaimer } from './DisclaimerNotice';
 
 const NAV = [
   { to: '/', label: 'Dashboard', icon: 'dashboard', end: true },
@@ -76,12 +77,19 @@ export function Layout() {
             <Icon name="ai" size={11} /> AI {aiEnabled ? 'on' : 'off'}
           </div>
           {aiEnabled && <div className="tiny muted" style={{ marginTop: 6, fontFamily: 'var(--mono)' }}>{aiModel}</div>}
+          <div className="legal-links">
+            <button type="button" onClick={openDisclaimer}>
+              Disclaimer &amp; privacy
+            </button>
+          </div>
         </div>
       </aside>
 
       <main className="content">
         <Outlet />
       </main>
+
+      <DisclaimerNotice />
     </div>
   );
 }

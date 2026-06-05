@@ -281,3 +281,64 @@ table.data tr:hover td {
     padding: 22px 18px 64px;
   }
 }
+
+/* ---------- Disclaimer notice ---------- */
+.legal-links {
+  margin-top: 12px;
+}
+.legal-links button {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+  transition: color 0.2s;
+}
+.legal-links button:hover {
+  color: var(--accent-bright);
+}
+
+.disclaimer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000; /* above the fixed grain layer (9999) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  backdrop-filter: blur(3px);
+  animation: disclaimer-fade 0.3s ease both;
+}
+.disclaimer-modal {
+  max-width: 540px;
+  width: 100%;
+  box-shadow: var(--shadow);
+  animation: disclaimer-rise 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.disclaimer-modal p a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+@keyframes disclaimer-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes disclaimer-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
