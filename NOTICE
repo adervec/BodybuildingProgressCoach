@@ -1,0 +1,30 @@
+Bodybuilding Progress Coach ("Living Sculpture")
+Copyright 2026 Bodybuilding Progress Coach contributors
+
+This product is licensed under the Apache License, Version 2.0 (the "License").
+You may not use this product except in compliance with the License. A copy of the
+License is provided in the LICENSE file, and is also available at:
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied.
+
+--------------------------------------------------------------------------------
+
+Third-party components
+----------------------
+This repository does not vendor (redistribute) any third-party source code,
+fonts, models, or media. Runtime and build-time dependencies are installed via
+npm, and some assets (web fonts, the MediaPipe WASM runtime, and the pose model)
+are fetched from third-party CDNs at run time. Their licenses and any required
+attributions are summarized in THIRD-PARTY-NOTICES.md.
+
+Original guides
+---------------
+The illustrated posing guides under "Associated Guide/" (prose and SVG diagrams)
+are original works of the project contributors. Historical figures, competitions,
+organizations, and trademarks referenced in those guides are named nominatively,
+for description and education only. This project is not affiliated with, endorsed
+by, or sponsored by any such organization. See DISCLAIMER.md.

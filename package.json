@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Honest, fair tracking of physique and posing progress from photos & video.",
+  "license": "Apache-2.0",
   "workspaces": [
     "server",
     "client"

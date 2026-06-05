@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/adervec/BodybuildingProgressCoach/actions/workflows/ci.yml/badge.svg)](https://github.com/adervec/BodybuildingProgressCoach/actions/workflows/ci.yml)
 [![Publish Docker image](https://github.com/adervec/BodybuildingProgressCoach/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/adervec/BodybuildingProgressCoach/actions/workflows/docker-publish.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 
 An honest, fair tracker for bodybuilding progress from your **photos and video** — covering
 both **physique** and **posing technique**, corroborated by **body-composition** data, with
@@ -9,6 +10,10 @@ both **physique** and **posing technique**, corroborated by **body-composition**
 two included posing guides (*The Sandow Plates* for men, *The Atalanta Plates* for women).
 
 > Muscle is built in the gym. The champion is built on the stage.
+
+> **Heads-up:** This is a software project — **not** medical, coaching, or legal advice,
+> and not a substitute for a doctor, certified coach, or lawyer. It's provided "as is"
+> for informational use. See **[DISCLAIMER.md](./DISCLAIMER.md)** and **[PRIVACY.md](./PRIVACY.md)**.
 
 ---
 
@@ -161,3 +166,23 @@ automatically, add a deploy job to the publish workflow once you've chosen a hos
 
 React 18 · Vite 5 · React Router · Recharts · MediaPipe Tasks Vision · Express 4 · node:sqlite ·
 sharp · @anthropic-ai/sdk · TypeScript · Vitest.
+
+## License & legal
+
+- **License:** [Apache License 2.0](./LICENSE) — free to use, modify, and redistribute
+  (including commercially) with attribution; provided **without warranty**.
+  Copyright 2026 Bodybuilding Progress Coach contributors. See [`NOTICE`](./NOTICE).
+- **Disclaimer:** Not medical, coaching, or legal advice — see [DISCLAIMER.md](./DISCLAIMER.md).
+- **Privacy:** Local-first by design; optional AI is off by default — see [PRIVACY.md](./PRIVACY.md).
+- **Third-party notices:** dependency and asset licenses are listed in
+  [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md).
+- **Security:** report vulnerabilities privately per [SECURITY.md](./SECURITY.md).
+- **Contributing:** see [CONTRIBUTING.md](./CONTRIBUTING.md) (contributions are Apache-2.0).
+
+> Going from private to public? The step-by-step checklist lives in
+> [GOING-PUBLIC.md](./GOING-PUBLIC.md).
+
+Names, trademarks, and competitions referenced in the guides (e.g. "Mr./Ms. Olympia,"
+the "Sandow" trophy) belong to their respective owners and are used nominatively for
+description and education. This project is not affiliated with or endorsed by any
+federation or trademark owner.
