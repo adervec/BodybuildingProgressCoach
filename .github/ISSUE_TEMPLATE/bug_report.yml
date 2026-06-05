@@ -1,0 +1,35 @@
+name: Bug report
+description: Report a problem with Bodybuilding Progress Coach
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug! ⚠️ Please **do not** attach photos of real people or paste any API keys.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what actually happened?
+      placeholder: |
+        1. Go to '...'
+        2. Click '...'
+        3. Expected '...' but saw '...'
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, browser, Node version, and how you're running it.
+      placeholder: "Windows 11 · Chrome 125 · Node 22.14 · npm run dev (or Docker)"
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console / server logs
+      description: Relevant errors from the browser console or the server output.
+      render: shell
+    validations:
+      required: false

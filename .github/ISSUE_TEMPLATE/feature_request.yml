@@ -1,0 +1,24 @@
+name: Feature request
+description: Suggest an idea or improvement
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What are you trying to do? What's missing or frustrating today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like to see happen?
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: |
+        Please keep proposals aligned with the project's honest, non-shaming ethos —
+        no diet, calorie, weight-loss, or medical advice. See
+        [DISCLAIMER.md](../blob/main/DISCLAIMER.md).
