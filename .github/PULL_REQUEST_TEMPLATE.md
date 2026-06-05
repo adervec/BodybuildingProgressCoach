@@ -15,4 +15,4 @@
 - [ ] `npm run build` passes
 - [ ] Docs updated if behavior changed (README, etc.)
 - [ ] No secrets, and no photos of real people, are committed
-- [ ] I agree my contribution is licensed under **Apache-2.0** (see [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md))
+- [ ] I agree my contribution is licensed under **Apache-2.0** (see [CONTRIBUTING.md](https://github.com/adervec/BodybuildingProgressCoach/blob/main/CONTRIBUTING.md))
