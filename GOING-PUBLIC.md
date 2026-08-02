@@ -35,12 +35,12 @@ monetize.
 ## Before you flip the repo to Public — do these on GitHub
 - [ ] **Read `DISCLAIMER.md` and `PRIVACY.md`** end-to-end and confirm you're comfortable with every statement.
 - [ ] *(Optional but wise)* Have a lawyer skim `LICENSE`, `DISCLAIMER.md`, and `PRIVACY.md` given the health/fitness subject matter.
-- [ ] **Repo → Settings → General**: add a description and topics (e.g. `bodybuilding`, `pose-estimation`, `react`, `typescript`, `mediapipe`).
-- [ ] **Repo → Settings → Code security**: enable **Dependabot alerts**, **Dependabot security updates**, **Secret scanning** + **push protection**, and **Private vulnerability reporting**. *(Dependabot version-update config is already committed in `.github/dependabot.yml`.)*
-- [ ] **Repo → Settings → Branches**: protect `main` — require the **CI** check to pass before merge, and disallow force-pushes.
-- [ ] **Decide GHCR package visibility**: after the first image publish, make the package public (Packages → package → Settings) if you want anyone to `docker pull` it; otherwise leave it private.
+- [x] **Repo → Settings → General**: description + topics set. ✅
+- [x] **Repo → Settings → Code security**: **Dependabot alerts**, **Dependabot security updates**, **Secret scanning** + **push protection**, and **Private vulnerability reporting** all enabled. ✅
+- [x] **Repo → Settings → Branches**: `main` protected — both CI matrix checks required, force-pushes and deletion disallowed. ✅
+- [ ] **Decide GHCR package visibility**: after the first image publish, make the package public (Packages → package → Settings) if you want anyone to `docker pull` it; otherwise leave it private. *(UI-only — no API for this.)*
 - [ ] **(Optional) Set a security contact** email in `SECURITY.md`, or rely on GitHub's private reporting (already referenced).
-- [ ] **Flip visibility**: Settings → Danger Zone → **Change visibility → Public**.
+- [x] **Flip visibility**: repo is **Public**. ✅
 - [ ] **(Optional) Tag a release** (`v0.1.0`) — this triggers the Docker publish workflow and creates `ghcr.io/adervec/bodybuildingprogresscoach:0.1.0`.
 
 ## Residual risks & recommendations (low, with mitigations)
