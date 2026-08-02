@@ -84,11 +84,23 @@ export function drawFrame(
 }
 
 function pickMime(): string {
-  const candidates = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+  // MP4 first: phones and social apps play it, many of them reject WebM outright.
+  const candidates = [
+    'video/mp4;codecs=avc1.42E01E',
+    'video/mp4',
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm',
+  ];
   for (const c of candidates) {
     if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(c)) return c;
   }
   return 'video/webm';
+}
+
+/** File extension matching whatever the recorder actually produced. */
+export function extForMime(mime: string): string {
+  return mime.includes('mp4') ? 'mp4' : 'webm';
 }
 
 /** Render frames to an offscreen canvas and export a .webm progress timelapse. */

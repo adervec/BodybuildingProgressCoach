@@ -6,7 +6,7 @@ import { posesForCategory, findPose } from '../lib/poses';
 import { PageHead, EmptyState } from '../components/Layout';
 import { Icon } from '../components/Icon';
 import { loadImage } from '../lib/poseDetect';
-import { drawFrame, exportTimelapseWebm, alignmentFromLandmarks, type TimelapseFrame } from '../lib/timelapse';
+import { drawFrame, exportTimelapseWebm, extForMime, alignmentFromLandmarks, type TimelapseFrame } from '../lib/timelapse';
 import { formatDate } from '../lib/format';
 
 const W = 540;
@@ -103,7 +103,7 @@ export function Timelapse() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${current?.name ?? 'athlete'}-${poseId}-timelapse.webm`.replace(/\s+/g, '_');
+      a.download = `${current?.name ?? 'athlete'}-${poseId}-timelapse.${extForMime(blob.type)}`.replace(/\s+/g, '_');
       a.click();
       URL.revokeObjectURL(url);
       toast('Timelapse exported');

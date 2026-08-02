@@ -41,12 +41,32 @@ opinion:
 ## Quick start
 
 ```bash
-npm install          # installs both workspaces
-npm run seed         # optional: creates two demo athletes with body-comp history
-npm run dev          # client on http://localhost:5188, API on http://localhost:8787
+npm start            # installs + builds if needed, serves on :8787, opens your browser
 ```
 
-Open **http://localhost:5188**, pick (or create) an athlete, and start uploading pose photos.
+That's the whole thing. Variants:
+
+```bash
+npm start -- --dev       # dev servers instead (client :5188, API :8787, hot reload)
+npm start -- --rebuild   # force a fresh build first
+npm run seed             # optional: two demo athletes with body-comp history
+```
+
+Pick (or create) an athlete, and start uploading pose photos.
+
+### Adding photos
+
+Drag photos or video anywhere onto the **Capture** page — or onto a specific plate in **Guides**
+to file them under that pose in one motion. Each photo is dated from its own **EXIF capture
+time**, not the day you copied it off your phone, so trend lines stay honest; the app tells you
+when it had to fall back to the file's timestamp.
+
+### Install it as an app
+
+The client is a PWA: open it and use your browser's **Install** button (Chrome/Edge address bar,
+or *Share → Add to Home Screen* on iOS). It then launches in its own window, works offline for
+everything already loaded — the UI, the guides, the on-device pose model — and only needs the
+server running for reading and writing your data.
 
 ### Optional: enable AI coaching
 
@@ -94,12 +114,12 @@ Then open **http://localhost:8787**. The container exposes a health check on `/a
 |------|--------------|
 | **Athletes** | Local profiles (no login). Category sets the theme + which guide's poses apply. |
 | **Dashboard** | Latest body-comp KPIs + trend chart, per-pose readiness, "focus next", recent captures. |
-| **Capture** | Upload photos/videos, tag pose + date; grab analyzable frames from videos. |
+| **Capture** | Drag & drop photos/videos (or browse), tag pose + date; grab analyzable frames from videos. Dates come from each photo's own EXIF. |
 | **Pose Studio** | Ideal-form diagram + your detected-landmark overlay, objective score breakdown, optional AI coaching, per-pose history. |
 | **Physique** | Log weight / body-fat / measurements (manual now; schema is smart-scale ready). Charts + history. |
 | **Compare** | Two dates of one pose, side by side, with metric deltas. |
-| **Timelapse** | Body-aligned, honest progress timelapse; in-app player + `.webm` export. |
-| **Guides** | The two original posing guides, embedded for reference. |
+| **Timelapse** | Body-aligned, honest progress timelapse; in-app player + MP4 export (WebM where MP4 isn't supported). |
+| **Guides** | The two original posing guides, embedded — with *your own* photos set into their empty plate frames. |
 
 ## Architecture
 
@@ -112,13 +132,19 @@ Then open **http://localhost:8787**. The container exposes a health check on `/a
   vision coaching (`server/src/ai.ts`) with prompt caching on the rubric.
 - **Associated Guide/** — the original HTML guides, served read-only at `/guides`.
 
-### Guide integration (both senses)
+### Guide integration (three senses)
 
 1. **Visual** — colors, fonts (Bodoni Moda / Spectral / DM Mono), film-grain/marble overlays, and
    the plate aesthetic are ported into the app's design system.
 2. **Analytical** — the guides' per-pose judging criteria become the scoring rubric, and the ideal
    joint angles encoded in each guide's figure renderer become the "reference-form" target. The
    guides' SVG mannequin renderers are reused as the in-app ideal-form diagrams.
+3. **Photographic** — every plate in the guides ships an empty frame captioned *"Drop a clean
+   reference photo of this pose here."* The Guides page makes that literal: each frame is filled
+   with your most recent shot of that pose (matched on the plate's own `data-figure` id), and is
+   itself a drop target — drop a photo on a plate and it uploads tagged with that pose. The guide
+   files stay untouched; the app decorates them at runtime. `client/src/lib/guides.test.ts`
+   guards that contract.
 
 ## Scripts
 
@@ -126,8 +152,9 @@ Then open **http://localhost:8787**. The container exposes a health check on `/a
 npm run dev          # run client + API together
 npm run build        # typecheck + build both workspaces
 npm run typecheck    # tsc on both workspaces
-npm run test         # geometry unit tests (vitest)
+npm run test         # unit tests: geometry, EXIF dating, guide contract, service worker
 npm run seed         # demo data
+npm start            # launcher: install/build if needed, serve, open a browser
 ```
 
 ## Continuous integration & deployment
