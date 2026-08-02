@@ -1,6 +1,6 @@
 // Service worker: app shell + vendored assets offline; data always live.
 // ponytail: hand-rolled instead of workbox — 40 lines beats a build plugin.
-const CACHE = 'ls-v1';
+const CACHE = 'ls-v2'; // v2: manifest orientation change (assets are cache-first, so bump to flush)
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.add('/')).then(() => self.skipWaiting()));

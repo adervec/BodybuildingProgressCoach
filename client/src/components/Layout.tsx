@@ -1,8 +1,10 @@
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useApp } from '../state/store';
 import { categoryLabel } from '../lib/poses';
 import { Icon } from './Icon';
 import { DisclaimerNotice, openDisclaimer } from './DisclaimerNotice';
+import { savedOrientation, saveOrientation, applyOrientation, type OrientationMode } from '../lib/orientation';
 
 const NAV = [
   { to: '/', label: 'Dashboard', icon: 'dashboard', end: true },
@@ -16,9 +18,21 @@ const NAV = [
 ];
 
 export function Layout() {
-  const { athletes, current, selectAthlete, aiEnabled, aiModel } = useApp();
+  const { athletes, current, selectAthlete, aiEnabled, aiModel, toast } = useApp();
   const navigate = useNavigate();
   const initials = current?.name?.trim()?.[0]?.toUpperCase() ?? '—';
+
+  const [orient, setOrient] = useState<OrientationMode>(() => savedOrientation());
+  useEffect(() => {
+    applyOrientation(orient); // startup: apply silently; browsers that can't lock just ignore it
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  async function changeOrient(mode: OrientationMode) {
+    setOrient(mode);
+    saveOrientation(mode);
+    const ok = await applyOrientation(mode);
+    if (!ok && mode !== 'auto') toast('Saved — this browser can’t lock rotation. It applies in the installed app (Android).');
+  }
 
   return (
     <div className="app-shell">
@@ -73,6 +87,14 @@ export function Layout() {
         </nav>
 
         <div style={{ marginTop: 'auto' }}>
+          <label className="field" style={{ marginBottom: 12 }}>
+            <span className="lab">Orientation</span>
+            <select value={orient} onChange={(e) => changeOrient(e.target.value as OrientationMode)}>
+              <option value="portrait">Portrait</option>
+              <option value="landscape">Landscape</option>
+              <option value="auto">Auto-rotate</option>
+            </select>
+          </label>
           <div className="pill" style={{ borderColor: aiEnabled ? 'var(--accent)' : 'var(--line)' }}>
             <Icon name="ai" size={11} /> AI {aiEnabled ? 'on' : 'off'}
           </div>
