@@ -1,0 +1,22 @@
+{
+  "name": "Living Sculpture — Progress Coach",
+  "short_name": "Living Sculpture",
+  "description": "Honest, fair tracking of physique and posing progress from your photos and video.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0c0b08",
+  "theme_color": "#0c0b08",
+  "categories": ["health", "fitness", "sports"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Capture", "url": "/capture" },
+    { "name": "Pose Studio", "url": "/pose" },
+    { "name": "Compare", "url": "/compare" }
+  ]
+}

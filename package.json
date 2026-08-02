@@ -9,6 +9,7 @@
     "client"
   ],
   "scripts": {
+    "start": "node launch.mjs",
     "dev": "concurrently -n server,client -c yellow,cyan \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "npm run dev -w server",
     "dev:client": "npm run dev -w client",
