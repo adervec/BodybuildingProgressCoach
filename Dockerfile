@@ -7,7 +7,7 @@
 ############################################
 # Stage 1 — build server (tsc) + client (vite)
 ############################################
-FROM node:24-bookworm-slim AS build
+FROM node:25-bookworm-slim AS build
 WORKDIR /app
 
 # Copy manifests first so `npm ci` is cached until a dependency actually changes.
@@ -23,7 +23,7 @@ RUN npm run build
 ############################################
 # Stage 2 — production dependencies only
 ############################################
-FROM node:24-bookworm-slim AS deps
+FROM node:25-bookworm-slim AS deps
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json package-lock.json ./
@@ -35,7 +35,7 @@ RUN npm ci --omit=dev
 ############################################
 # Stage 3 — lean runtime
 ############################################
-FROM node:24-bookworm-slim AS runtime
+FROM node:25-bookworm-slim AS runtime
 ENV NODE_ENV=production \
     API_PORT=8787
 # The server resolves ../client/dist and ../Associated Guide from its own dir,
