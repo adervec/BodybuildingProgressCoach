@@ -6,8 +6,8 @@ responsible for the data you collect from them (see "Self-hosting" below).
 
 > Plain-language summary: by default, your photos, videos, and measurements stay on
 > your own machine. The web fonts and the ML model are bundled with the app (no
-> CDNs), so the only time anything leaves your computer is if **you** turn on the
-> optional AI critique.
+> CDNs), so the only times anything leaves your computer are if **you** turn on the
+> optional AI critique or the optional cloud backup.
 
 ## What stays local
 - **Photos & videos** you upload are stored on the server's local disk under
@@ -29,11 +29,27 @@ responsible for the data you collect from them (see "Self-hosting" below).
    [Terms](https://www.anthropic.com/legal/commercial-terms) and
    [Usage Policy](https://www.anthropic.com/legal/aup). With no key set, this never
    happens and the app remains fully functional.
-2. **That's the only one.** The web fonts, the MediaPipe WASM runtime, and the
+2. **Optional cloud backup (off by default).** The **Backup** page can copy your
+   data — and, if you tick the box, your photos and videos — to a location you
+   choose:
+   - **Local folder**: a directory you pick on your own machine. Nothing touches
+     the network. (Point it at a Drive/Dropbox/OneDrive *desktop sync folder* and
+     their client does the uploading, under their privacy policy, not ours.)
+   - **Google Drive**: your browser signs in to Google and uploads into Drive's
+     private **app-data folder** — an area only this app can read, invisible to the
+     rest of your Drive. Enabling it loads Google's sign-in script from
+     `accounts.google.com` and talks to `googleapis.com`; those are **the only
+     third-party requests this app can make**, they happen only while sync is on,
+     and the data goes to *your* Drive. The access token is held in memory for the
+     session and never written to disk. The app requests the narrowest scope that
+     works (`drive.appdata`), so it cannot see your other Drive files.
+
+   Your `ANTHROPIC_API_KEY` is server-side configuration and is **never** included
+   in a backup.
+3. **That's all of them.** The web fonts, the MediaPipe WASM runtime, and the
    pose-detection model are all **self-hosted** (served from the app's own origin),
-   so by default the app makes **no third-party network requests** and works fully
-   offline. Pose detection still runs entirely in your browser. *(This is verified:
-   on load, every request goes to the app's own origin.)*
+   so with both options off the app makes **no third-party network requests** and
+   works fully offline. Pose detection always runs entirely in your browser.
 
 ## Deleting your data
 All app data lives under `server/data/`. Deleting that directory (or the specific

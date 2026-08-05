@@ -15,6 +15,7 @@ const NAV = [
   { to: '/timelapse', label: 'Timelapse', icon: 'timelapse' },
   { to: '/guides', label: 'Guides', icon: 'guide' },
   { to: '/athletes', label: 'Athletes', icon: 'athletes' },
+  { to: '/backup', label: 'Backup', icon: 'download' },
 ];
 
 export function Layout() {

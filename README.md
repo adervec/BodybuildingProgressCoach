@@ -68,6 +68,25 @@ or *Share → Add to Home Screen* on iOS). It then launches in its own window, w
 everything already loaded — the UI, the guides, the on-device pose model — and only needs the
 server running for reading and writing your data.
 
+### Backing up (and syncing two devices)
+
+Everything you own lives in `server/data/` — one SQLite file plus your media. The **Backup** page
+copies it somewhere safe, using the same two providers (and the same code) as
+[Tachyread](https://github.com/adervec/Tachyread):
+
+- **Local folder** — pick any directory. Point it at a Drive / Dropbox / OneDrive *desktop sync
+  folder* and you get cloud backup for free, with no accounts or API keys.
+- **Google Drive** — signs in with Google and writes to Drive's private **app-data folder**, which
+  only this app can read. Your browser talks to Drive directly.
+
+Sync is two-way and merges on natural keys, so applying the same backup twice changes nothing and
+two devices converge instead of overwriting each other. Photos are opt-in (they're large) and
+immutable, so they're only ever copied to the side that's missing them.
+
+> **Self-hosting elsewhere?** The bundled OAuth client ID only works on `localhost` and the
+> project's own published origin. Any other deployment must supply its own client ID — the Backup
+> page shows a field for it. (A client ID is a public identifier, not a secret.)
+
 ### Optional: enable AI coaching
 
 ```bash
@@ -120,6 +139,7 @@ Then open **http://localhost:8787**. The container exposes a health check on `/a
 | **Compare** | Two dates of one pose, side by side, with metric deltas. |
 | **Timelapse** | Body-aligned, honest progress timelapse; in-app player + MP4 export (WebM where MP4 isn't supported). |
 | **Guides** | The two original posing guides, embedded — with *your own* photos set into their empty plate frames. |
+| **Backup** | Two-way sync to a local/Drive-sync folder or straight to Google Drive's private app folder. Off by default. |
 
 ## Architecture
 
@@ -152,7 +172,7 @@ Then open **http://localhost:8787**. The container exposes a health check on `/a
 npm run dev          # run client + API together
 npm run build        # typecheck + build both workspaces
 npm run typecheck    # tsc on both workspaces
-npm run test         # unit tests: geometry, EXIF dating, guide contract, service worker
+npm run test         # unit tests: geometry, EXIF, guide contract, service worker, orientation, sync
 npm run seed         # demo data
 npm start            # launcher: install/build if needed, serve, open a browser
 ```
@@ -181,9 +201,10 @@ automatically, add a deploy job to the publish workflow once you've chosen a hos
 ## Notes & roadmap
 
 - **Self-hosted & offline.** The MediaPipe runtime + pose model and the web fonts are served from
-  the app's own origin (provisioned at build time), so the app makes **no third-party network
-  requests** and runs fully offline. Inference runs locally; photos are never uploaded for geometry
-  analysis.
+  the app's own origin (provisioned at build time), so out of the box the app makes **no
+  third-party network requests** and runs fully offline. Inference runs locally; photos are never
+  uploaded for geometry analysis. Two opt-in features can reach the network — AI coaching
+  (Anthropic) and Google Drive backup (Google) — and both are off until you turn them on.
 - **Reference-form angles are stylized** (drawn to teach shape), so that sub-score is directional;
   symmetry and proportions are the camera-robust headline metrics.
 - **Later:** smart-scale / Bluetooth import (schema already supports `source='scale'`), full video

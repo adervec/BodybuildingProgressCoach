@@ -53,10 +53,11 @@ machine-readable report can be regenerated at any time, e.g. with
 
 ---
 
-## Self-hosted assets (no third-party calls at runtime)
+## Self-hosted assets (no third-party calls by default)
 
-The app serves all of the following from its own origin, so it makes **no
-third-party network requests** at runtime:
+The app serves all of the following from its own origin, so with both opt-in
+network features off (AI coaching, Google Drive backup) it makes **no third-party
+network requests** at runtime:
 
 | Asset | License | How it's provided |
 |---|---|---|
@@ -73,6 +74,24 @@ produced by **Anthropic's Claude API**. Use of that API is governed by Anthropic
 [Terms of Service](https://www.anthropic.com/legal/commercial-terms) and
 [Usage Policy](https://www.anthropic.com/legal/aup). This feature is **off by
 default**; with no key configured, no image is ever sent to Anthropic.
+
+---
+
+## Optional Google Drive backup
+
+When Drive sync is enabled on the **Backup** page, the app loads Google's Identity
+Services script from `accounts.google.com/gsi/client` (not redistributed here) and
+calls the **Google Drive REST API** at `googleapis.com`. It requests only the
+`drive.appdata` scope, so it can read and write **only its own private app-data
+folder** — never the rest of your Drive. Use of these APIs is governed by
+[Google's Terms of Service](https://policies.google.com/terms) and
+[Privacy Policy](https://policies.google.com/privacy). This feature is **off by
+default**; with it off, no request is made to Google.
+
+The bundled OAuth **client ID** is a public identifier (it ships in client-side
+JavaScript by design), not a credential — no client secret is used or stored. It
+is shared with the sibling Tachyread and GymTracker apps and is refused by the app
+on any origin other than `localhost` or the project's published origin.
 
 ---
 

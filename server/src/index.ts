@@ -8,6 +8,7 @@ import { athletesRouter } from './routes/athletes.js';
 import { mediaRouter } from './routes/media.js';
 import { analysisRouter } from './routes/analysis.js';
 import { bodyCompRouter } from './routes/bodycomp.js';
+import { backupRouter } from './routes/backup.js';
 import { isAiEnabled } from './ai.js';
 
 const app = express();
@@ -17,6 +18,10 @@ const app = express();
 const PORT = Number(process.env.API_PORT) || 8787;
 
 app.use(cors());
+// Restoring media sends raw bytes; matches multer's 250 MB upload ceiling. Must precede express.json.
+app.use('/api/backup/media-file', express.raw({ type: '*/*', limit: '250mb' }));
+// A whole-library backup (landmarks for every analysis) far exceeds the 2mb default.
+app.use('/api/backup/import', express.json({ limit: '256mb' }));
 app.use(express.json({ limit: '2mb' }));
 
 // Static media + the original style guides (read-only reference).
@@ -32,6 +37,7 @@ app.use('/api/athletes', athletesRouter);
 app.use('/api', mediaRouter);
 app.use('/api', analysisRouter);
 app.use('/api', bodyCompRouter);
+app.use('/api', backupRouter);
 
 // Single-server / production mode: serve the built client if it exists.
 const CLIENT_DIST = path.resolve(SERVER_ROOT, '..', 'client', 'dist');

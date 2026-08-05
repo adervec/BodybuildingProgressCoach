@@ -9,6 +9,7 @@ import { Physique } from './pages/Physique';
 import { Compare } from './pages/Compare';
 import { Timelapse } from './pages/Timelapse';
 import { Guides } from './pages/Guides';
+import { Backup } from './pages/Backup';
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
             <Route path="timelapse" element={<Timelapse />} />
             <Route path="guides" element={<Guides />} />
             <Route path="athletes" element={<Athletes />} />
+            <Route path="backup" element={<Backup />} />
           </Route>
         </Routes>
       </BrowserRouter>
