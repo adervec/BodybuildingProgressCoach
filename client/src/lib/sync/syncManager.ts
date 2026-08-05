@@ -13,6 +13,8 @@
 //     "copy what the other side is missing". Opt-in, because videos are large.
 
 import { getSyncProvider, DATA_FILE_NAME, type SyncConfig } from './syncProviders';
+import { IS_STATIC } from '../../api';
+import * as local from '../local/backup';
 
 export interface SyncResult {
   at: number;
@@ -40,15 +42,48 @@ async function parseSyncBlob(blob: Blob): Promise<unknown> {
   }
 }
 
-async function exportBundle(): Promise<unknown> {
-  const r = await fetch('/api/backup/export');
-  if (!r.ok) throw new Error(`Could not read your data (${r.status}).`);
-  return r.json();
-}
+// The two backends behind one shape: the server's REST routes, or IndexedDB in the static build.
+const store = {
+  async exportBundle(): Promise<unknown> {
+    if (IS_STATIC) return local.exportBundle();
+    const r = await fetch('/api/backup/export');
+    if (!r.ok) throw new Error(`Could not read your data (${r.status}).`);
+    return r.json();
+  },
+  async importBundle(bundle: unknown): Promise<SyncResult['added']> {
+    if (IS_STATIC) return local.importBundle(bundle);
+    const r = await fetch('/api/backup/import', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(bundle),
+    });
+    const body = (await r.json().catch(() => ({}))) as { error?: string; added?: SyncResult['added'] };
+    if (!r.ok) throw new Error(body.error || `Restore failed (${r.status}).`);
+    return body.added;
+  },
+  async manifest(): Promise<{ present: string[]; missing: string[] }> {
+    if (IS_STATIC) return local.mediaManifest();
+    return fetch('/api/backup/media-manifest').then((r) => r.json());
+  },
+  async readMedia(name: string): Promise<Blob | null> {
+    if (IS_STATIC) return local.getMediaBlob(name);
+    const r = await fetch(`/media/${name}`);
+    return r.ok ? r.blob() : null;
+  },
+  async writeMedia(name: string, blob: Blob): Promise<boolean> {
+    if (IS_STATIC) return local.putMediaFile(name, blob);
+    const r = await fetch(`/api/backup/media-file/${encodeURIComponent(name)}`, {
+      method: 'PUT',
+      headers: { 'content-type': blob.type || 'application/octet-stream' },
+      body: blob,
+    });
+    return r.ok;
+  },
+};
 
 export async function backupToProvider(providerId: string, cfg: SyncConfig, opts: { silent?: boolean } = {}): Promise<SyncResult> {
   const { p, conn } = await connectTo(providerId, cfg, opts);
-  const blob = new Blob([JSON.stringify(await exportBundle())], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify(await store.exportBundle())], { type: 'application/json' });
   await p.upload(conn, DATA_FILE_NAME, blob);
   return { at: Date.now(), bytes: blob.size };
 }
@@ -57,14 +92,8 @@ export async function restoreFromProvider(providerId: string, cfg: SyncConfig, o
   const { p, conn } = await connectTo(providerId, cfg, opts);
   const blob = await p.download(conn, DATA_FILE_NAME);
   if (!blob) throw new Error('No Living Sculpture backup found in that location yet — back up first.');
-  const r = await fetch('/api/backup/import', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(await parseSyncBlob(blob)),
-  });
-  const body = (await r.json().catch(() => ({}))) as { error?: string; added?: SyncResult['added'] };
-  if (!r.ok) throw new Error(body.error || `Restore failed (${r.status}).`);
-  return { at: Date.now(), bytes: blob.size, added: body.added };
+  const added = await store.importBundle(await parseSyncBlob(blob));
+  return { at: Date.now(), bytes: blob.size, added };
 }
 
 /**
@@ -77,7 +106,7 @@ export async function syncMediaWithProvider(
   opts: { silent?: boolean; onProgress?: (done: number, total: number) => void } = {}
 ): Promise<{ uploaded: number; downloaded: number; skipped: number }> {
   const { p, conn } = await connectTo(providerId, cfg, opts);
-  const manifest = (await fetch('/api/backup/media-manifest').then((r) => r.json())) as { present: string[]; missing: string[] };
+  const manifest = await store.manifest();
   const remote = new Set(await p.list(conn));
 
   const toUpload = manifest.present.filter((n) => !remote.has(n));
@@ -90,23 +119,16 @@ export async function syncMediaWithProvider(
   // ponytail: sequential. Photos are big and Drive rate-limits; a parallel pool is the upgrade if
   // a first full sync ever feels slow.
   for (const name of toUpload) {
-    const res = await fetch(`/media/${name}`);
-    if (res.ok) {
-      await p.upload(conn, name, await res.blob());
+    const blob = await store.readMedia(name);
+    if (blob) {
+      await p.upload(conn, name, blob);
       uploaded++;
     }
     opts.onProgress?.(++done, total);
   }
   for (const name of toDownload) {
     const blob = await p.download(conn, name);
-    if (blob) {
-      const put = await fetch(`/api/backup/media-file/${encodeURIComponent(name)}`, {
-        method: 'PUT',
-        headers: { 'content-type': blob.type || 'application/octet-stream' },
-        body: blob,
-      });
-      if (put.ok) downloaded++;
-    }
+    if (blob && (await store.writeMedia(name, blob))) downloaded++;
     opts.onProgress?.(++done, total);
   }
   return { uploaded, downloaded, skipped: manifest.present.length - uploaded };

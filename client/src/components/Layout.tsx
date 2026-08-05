@@ -4,6 +4,7 @@ import { useApp } from '../state/store';
 import { categoryLabel } from '../lib/poses';
 import { Icon } from './Icon';
 import { DisclaimerNotice, openDisclaimer } from './DisclaimerNotice';
+import { thumbSrc } from '../api';
 import { savedOrientation, saveOrientation, applyOrientation, type OrientationMode } from '../lib/orientation';
 
 const NAV = [
@@ -46,7 +47,7 @@ export function Layout() {
         <div className="athlete-switch">
           <div className="who">
             <div className="avatar">
-              {current?.latest_thumb ? <img src={`/thumbs/${current.latest_thumb}`} alt="" /> : initials}
+              {current?.latest_thumb ? <img src={thumbSrc(current.latest_thumb)} alt="" /> : initials}
             </div>
             <div style={{ minWidth: 0 }}>
               <div className="name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

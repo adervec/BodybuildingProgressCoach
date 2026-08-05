@@ -1,5 +1,6 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route } from 'react-router-dom';
 import { AppProvider } from './state/store';
+import { IS_STATIC } from './api';
 import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { Athletes } from './pages/Athletes';
@@ -11,10 +12,14 @@ import { Timelapse } from './pages/Timelapse';
 import { Guides } from './pages/Guides';
 import { Backup } from './pages/Backup';
 
+// GitHub Pages has no SPA rewrite, so a deep link like /compare would 404 on reload. Hash routing
+// sidesteps that entirely; the self-hosted server does have the rewrite, so it keeps clean URLs.
+const Router = IS_STATIC ? HashRouter : BrowserRouter;
+
 export default function App() {
   return (
     <AppProvider>
-      <BrowserRouter>
+      <Router>
         <Routes>
           <Route element={<Layout />}>
             <Route index element={<Dashboard />} />
@@ -28,7 +33,7 @@ export default function App() {
             <Route path="backup" element={<Backup />} />
           </Route>
         </Routes>
-      </BrowserRouter>
+      </Router>
     </AppProvider>
   );
 }

@@ -1,4 +1,11 @@
 import type { Athlete, BodyComp, Category, MediaAsset, PoseAnalysis, AiCoaching } from './lib/types';
+import { localApi } from './localApi';
+
+/**
+ * The static (GitHub Pages) build has no server, so it runs on IndexedDB via `localApi`, which
+ * implements this exact surface. Everything else in the app talks to `api` and never knows which.
+ */
+export const IS_STATIC = import.meta.env.VITE_STATIC === '1';
 
 async function j<T>(r: Response): Promise<T> {
   if (!r.ok) {
@@ -14,7 +21,7 @@ export interface AiStatus {
   model: string;
 }
 
-export const api = {
+const serverApi = {
   status: () => fetch('/api/status').then(j<{ ok: boolean; ai: AiStatus }>),
 
   athletes: {
@@ -96,3 +103,14 @@ export const api = {
     remove: (id: number) => fetch(`/api/bodycomp/${id}`, { method: 'DELETE' }).then(j<null>),
   },
 };
+
+export const api = (IS_STATIC ? (localApi as unknown as typeof serverApi) : serverApi);
+
+/**
+ * `latest_thumb` is a file name on the server and an object URL in the browser build — one helper so
+ * avatar call sites don't branch on the backend.
+ */
+export function thumbSrc(nameOrUrl: string | null | undefined): string | undefined {
+  if (!nameOrUrl) return undefined;
+  return nameOrUrl.startsWith('blob:') ? nameOrUrl : `/thumbs/${nameOrUrl}`;
+}

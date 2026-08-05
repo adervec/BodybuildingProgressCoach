@@ -1,9 +1,13 @@
 // Service worker: app shell + vendored assets offline; data always live.
 // ponytail: hand-rolled instead of workbox — 40 lines beats a build plugin.
-const CACHE = 'ls-v2'; // v2: manifest orientation change (assets are cache-first, so bump to flush)
+const CACHE = 'ls-v3'; // v3: base-relative shell (GitHub Pages serves the app from a subpath)
+
+// The app shell's URL, derived from where this worker itself is served: '/' when self-hosted at the
+// origin root, '/<repo>/' on GitHub Pages. Absolute '/' would fetch the wrong document there.
+const SHELL = new URL('./', self.location.href).pathname;
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.add('/')).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then((c) => c.add(SHELL)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {
@@ -26,10 +30,10 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(
       fetch(request)
         .then((res) => {
-          caches.open(CACHE).then((c) => c.put('/', res.clone()));
+          caches.open(CACHE).then((c) => c.put(SHELL, res.clone()));
           return res;
         })
-        .catch(() => caches.match('/').then((r) => r || Response.error()))
+        .catch(() => caches.match(SHELL).then((r) => r || Response.error()))
     );
     return;
   }

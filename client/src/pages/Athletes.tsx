@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../state/store';
-import { api } from '../api';
+import { api, thumbSrc } from '../api';
 import { CATEGORIES, categoryLabel, themeFor } from '../lib/poses';
 import type { Category } from '../lib/types';
 import { PageHead } from '../components/Layout';
@@ -55,7 +55,7 @@ export function Athletes() {
           <div key={a.id} className="plate hoverable" style={{ padding: 20 }} data-theme={themeFor(a.category)}>
             <div className="row" style={{ alignItems: 'flex-start' }}>
               <div className="avatar" style={{ width: 50, height: 50 }}>
-                {a.latest_thumb ? <img src={`/thumbs/${a.latest_thumb}`} alt="" /> : a.name[0]?.toUpperCase()}
+                {a.latest_thumb ? <img src={thumbSrc(a.latest_thumb)} alt="" /> : a.name[0]?.toUpperCase()}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="display" style={{ fontSize: 21 }}>{a.name}</div>

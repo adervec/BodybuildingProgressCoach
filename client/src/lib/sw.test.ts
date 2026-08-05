@@ -12,7 +12,7 @@ function loadSw(fetchImpl: (r: Req) => Promise<unknown>) {
   const handlers: Record<string, (e: any) => void> = {};
   const cache = { match: async () => undefined, put: async () => {}, add: async () => {} };
   const self = {
-    location: { origin: 'http://localhost:8787' },
+    location: { origin: 'http://localhost:8787', href: 'http://localhost:8787/sw.js' },
     addEventListener: (t: string, fn: (e: any) => void) => (handlers[t] = fn),
     skipWaiting: () => {},
     clients: { claim: () => {} },

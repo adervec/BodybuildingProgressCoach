@@ -11,6 +11,10 @@ two included posing guides (*The Sandow Plates* for men, *The Atalanta Plates* f
 
 > Muscle is built in the gym. The champion is built on the stage.
 
+**▶ Try it in your browser: [adervec.github.io/BodybuildingProgressCoach](https://adervec.github.io/BodybuildingProgressCoach/)**
+— no install, no account, nothing uploaded. That build keeps everything in your browser's own storage
+(see [Two ways to run it](#two-ways-to-run-it)); run it locally if you want AI coaching.
+
 > **Heads-up:** This is a software project — **not** medical, coaching, or legal advice,
 > and not a substitute for a doctor, certified coach, or lawyer. It's provided "as is"
 > for informational use. See **[DISCLAIMER.md](./DISCLAIMER.md)** and **[PRIVACY.md](./PRIVACY.md)**.
@@ -37,6 +41,24 @@ opinion:
   prescriptions, and never body-shaming.
 
 ---
+
+## Two ways to run it
+
+The same source tree builds two apps. Neither one sends your photos anywhere.
+
+| | **Hosted** ([Pages](https://adervec.github.io/BodybuildingProgressCoach/)) | **Self-hosted** (`npm start`) |
+|---|---|---|
+| Setup | none — open the link | Node 22+, one command |
+| Where data lives | this browser's IndexedDB | `server/data/` (SQLite + files) |
+| Pose analysis, guides, timelapse, compare | ✅ identical | ✅ |
+| AI coaching | ✗ — needs a server to hold the API key | ✅ with `ANTHROPIC_API_KEY` |
+| Moving between devices | Backup page → Drive / a folder | same, plus you own the files |
+
+The hosted build is the whole app minus AI coaching: pose detection already ran in your browser, so
+nothing was lost by dropping the server. Its one real cost is that **clearing site data erases your
+history** — so back it up (the app says so on the Backup page).
+
+Backups are interchangeable: a bundle from the self-hosted app restores into the hosted one and back.
 
 ## Quick start
 
@@ -185,6 +207,7 @@ GitHub Actions handles both CI and image publishing:
 |----------|---------|--------------|
 | **CI** (`.github/workflows/ci.yml`) | push / PR to `main` & `dev` | `npm ci` → `typecheck` → `test` → `build` on a Node **22.x + 24.x** matrix, then uploads `client/dist` as an artifact. |
 | **Publish Docker image** (`.github/workflows/docker-publish.yml`) | push to `main`, `v*.*.*` tags (PRs build-only) | Builds the production `Dockerfile` and pushes to **GHCR** (`ghcr.io/adervec/bodybuildingprogresscoach`), tagged `latest`, the branch/sha, and semver on tags. |
+| **Deploy to GitHub Pages** (`.github/workflows/pages.yml`) | push to `main` | Builds the browser-only client (`VITE_STATIC=1`), asserts the bundle contains no server calls and no absolute asset paths, and publishes it to [Pages](https://adervec.github.io/BodybuildingProgressCoach/). |
 
 `Dependabot` (`.github/dependabot.yml`) keeps the npm deps, GitHub Actions, and the Docker base
 image up to date weekly.

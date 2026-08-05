@@ -11,6 +11,8 @@ import {
   type SyncConfig,
 } from '../lib/sync/syncProviders';
 import { backupToProvider, restoreFromProvider, syncWithProvider } from '../lib/sync/syncManager';
+import { IS_STATIC } from '../api';
+import { storageEstimate } from '../lib/local/store';
 
 const CFG_KEY = 'ls.sync';
 
@@ -29,7 +31,12 @@ export function Backup() {
   const [busy, setBusy] = useState<string | null>(null);
   const [progress, setProgress] = useState<string>('');
   const [profile, setProfile] = useState(getDriveProfile());
+  const [storage, setStorage] = useState<{ usage: number; quota: number; persisted: boolean } | null>(null);
   const didBoot = useRef(false);
+
+  useEffect(() => {
+    if (IS_STATIC) storageEstimate().then(setStorage);
+  }, []);
 
   const save = useCallback((next: SyncConfig) => {
     setCfg(next);
@@ -92,8 +99,26 @@ export function Backup() {
       <PageHead
         kicker="Backup"
         title="Sync & backup"
-        lede="Your photos, analyses and measurements live in one folder on this machine. Copy them somewhere safe — and keep two devices in step — without any of it passing through a server of ours."
+        lede={
+          IS_STATIC
+            ? 'This version keeps everything inside this browser, so backing up isn’t optional housekeeping — it’s how your work survives a cleared cache or a new device.'
+            : 'Your photos, analyses and measurements live in one folder on this machine. Copy them somewhere safe — and keep two devices in step — without any of it passing through a server of ours.'
+        }
       />
+
+      {IS_STATIC && (
+        <p className="banner" style={{ marginBottom: 18 }}>
+          <b>Browser-only build.</b> Your data lives in this browser’s storage on this device — clearing site data erases
+          it. Back up here, and use the same backup to move between devices.
+          {storage && storage.quota > 0 && (
+            <>
+              {' '}
+              Using {(storage.usage / 1e6).toFixed(0)} MB of roughly {(storage.quota / 1e9).toFixed(1)} GB available
+              {storage.persisted ? ' (storage marked persistent).' : '.'}
+            </>
+          )}
+        </p>
+      )}
 
       <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 22, alignItems: 'start' }}>
         <div className="card">

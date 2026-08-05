@@ -8,9 +8,10 @@ import { attachDrop } from '../components/DropZone';
 import { captureDate } from '../lib/exif';
 import { shortDate } from '../lib/format';
 
+// BASE_URL so the guides resolve under a subpath too (the Pages build serves them from public/).
 const GUIDES = [
-  { key: 'men', label: 'The Sandow Plates (Men)', src: '/guides/posing-guide.html' },
-  { key: 'women', label: 'The Atalanta Plates (Women)', src: '/guides/posing-guide-women.html' },
+  { key: 'men', label: 'The Sandow Plates (Men)', src: `${import.meta.env.BASE_URL}guides/posing-guide.html` },
+  { key: 'women', label: 'The Atalanta Plates (Women)', src: `${import.meta.env.BASE_URL}guides/posing-guide-women.html` },
 ];
 
 /* Styles for what we inject into the guide document — it has no idea we exist. */

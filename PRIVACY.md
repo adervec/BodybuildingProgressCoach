@@ -9,6 +9,18 @@ responsible for the data you collect from them (see "Self-hosting" below).
 > CDNs), so the only times anything leaves your computer are if **you** turn on the
 > optional AI critique or the optional cloud backup.
 
+## Two builds, same guarantee
+The **hosted** build at `adervec.github.io/BodybuildingProgressCoach` has no server
+at all: your photos, measurements and analyses are held in **your own browser's
+IndexedDB** and never transmitted. GitHub serves the page's static files and
+nothing else — no upload endpoint exists. The trade-offs are that clearing site
+data erases everything (back up!) and AI coaching is unavailable, because there is
+no server to hold an API key.
+
+The **self-hosted** build stores the same data on your own machine under
+`server/data/`. Everything below describes it; the hosted build behaves the same
+minus the AI section.
+
 ## What stays local
 - **Photos & videos** you upload are stored on the server's local disk under
   `server/data/media` (thumbnails in `server/data/thumbs`). They are not uploaded
