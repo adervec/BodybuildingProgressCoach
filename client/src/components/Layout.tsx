@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../state/store';
 import { categoryLabel } from '../lib/poses';
 import { Icon } from './Icon';
@@ -25,6 +25,23 @@ export function Layout() {
   const navigate = useNavigate();
   const initials = current?.name?.trim()?.[0]?.toUpperCase() ?? '—';
 
+  // The content pane is the scroll container now, so a route change must reset it —
+  // the browser only does this for body scrolling.
+  const mainRef = useRef<HTMLElement>(null);
+  const { pathname } = useLocation();
+  useEffect(() => {
+    mainRef.current?.scrollTo(0, 0);
+  }, [pathname]);
+
+  // On phones the sidebar collapses to an icon rail; `navOpen` expands it into a drawer.
+  const [navOpen, setNavOpen] = useState(false);
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setNavOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [navOpen]);
+
   const [orient, setOrient] = useState<OrientationMode>(() => savedOrientation());
   useEffect(() => {
     applyOrientation(orient); // startup: apply silently; browsers that can't lock just ignore it
@@ -39,7 +56,17 @@ export function Layout() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      {navOpen && <div className="nav-veil" onClick={() => setNavOpen(false)} />}
+      <aside className={navOpen ? 'sidebar open' : 'sidebar'}>
+        <button
+          type="button"
+          className="nav-toggle"
+          aria-label={navOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={navOpen}
+          onClick={() => setNavOpen((o) => !o)}
+        >
+          {navOpen ? '✕' : '☰'}
+        </button>
         <div className="brand">
           Living Sculpture
           <div className="sub">Progress Coach</div>
@@ -64,6 +91,7 @@ export function Layout() {
               onChange={(e) => {
                 const id = Number(e.target.value);
                 selectAthlete(id);
+                setNavOpen(false);
                 navigate('/');
               }}
             >
@@ -80,16 +108,22 @@ export function Layout() {
           <ul className="nav-links">
             {NAV.map((n) => (
               <li key={n.to}>
-                <NavLink to={n.to} end={n.end} className={({ isActive }) => (isActive ? 'active' : '')}>
+                <NavLink
+                  to={n.to}
+                  end={n.end}
+                  title={n.label}
+                  className={({ isActive }) => (isActive ? 'active' : '')}
+                  onClick={() => setNavOpen(false)}
+                >
                   <Icon name={n.icon} className="ic" />
-                  {n.label}
+                  <span className="nav-label">{n.label}</span>
                 </NavLink>
               </li>
             ))}
           </ul>
         </nav>
 
-        <div style={{ marginTop: 'auto' }}>
+        <div className="side-extras" style={{ marginTop: 'auto' }}>
           <label className="field" style={{ marginBottom: 12 }}>
             <span className="lab">Orientation</span>
             <select value={orient} onChange={(e) => changeOrient(e.target.value as OrientationMode)}>
@@ -110,8 +144,10 @@ export function Layout() {
         </div>
       </aside>
 
-      <main className="content">
-        <Outlet />
+      <main ref={mainRef} className="content">
+        <div className="content-inner">
+          <Outlet />
+        </div>
       </main>
 
       <DisclaimerNotice />
