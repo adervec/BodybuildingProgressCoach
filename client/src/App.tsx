@@ -6,6 +6,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Athletes } from './pages/Athletes';
 import { Capture } from './pages/Capture';
 import { PoseStudio } from './pages/PoseStudio';
+import { Mirror } from './pages/Mirror';
 import { Physique } from './pages/Physique';
 import { Compare } from './pages/Compare';
 import { Timelapse } from './pages/Timelapse';
@@ -25,6 +26,7 @@ export default function App() {
             <Route index element={<Dashboard />} />
             <Route path="capture" element={<Capture />} />
             <Route path="pose" element={<PoseStudio />} />
+            <Route path="mirror" element={<Mirror />} />
             <Route path="physique" element={<Physique />} />
             <Route path="compare" element={<Compare />} />
             <Route path="timelapse" element={<Timelapse />} />

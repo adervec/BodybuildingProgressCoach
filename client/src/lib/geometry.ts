@@ -43,6 +43,11 @@ const POSE_GEOM: Record<string, GeomSpec> = {
   bls: { ulA: -74, flA: 20, urA: 74, frA: -20, tlA: -7, trA: 7 },
   mm: { ulA: -42, flA: 52, urA: 42, frA: -52, tlA: -9, trA: 9 },
   wpFDB: { ulA: -124, flA: 150, urA: 124, frA: -150, tlA: -7, trA: 7 },
+  vacuum: { ulA: -128, flA: 162, urA: 128, frA: -162, tlA: -7, trA: 7 },
+  wpRDB: { ulA: -124, flA: 150, urA: 124, frA: -150, tlA: -7, trA: 7 },
+  wpAbsThighs: { ulA: -128, flA: 162, urA: 128, frA: -162, tlA: -5, trA: 16 },
+  figureFront: { ulA: -18, flA: 39, urA: 18, frA: -39, tlA: -5, trA: 5 },
+  figureBack: { ulA: -18, flA: 39, urA: 18, frA: -39, tlA: -5, trA: 5 },
 };
 
 type Pt = { x: number; y: number; v: number };

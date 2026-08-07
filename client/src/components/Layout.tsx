@@ -11,6 +11,7 @@ const NAV = [
   { to: '/', label: 'Dashboard', icon: 'dashboard', end: true },
   { to: '/capture', label: 'Capture', icon: 'capture' },
   { to: '/pose', label: 'Pose Studio', icon: 'pose' },
+  { to: '/mirror', label: 'Mirror', icon: 'camera' },
   { to: '/physique', label: 'Physique', icon: 'physique' },
   { to: '/compare', label: 'Compare', icon: 'compare' },
   { to: '/timelapse', label: 'Timelapse', icon: 'timelapse' },

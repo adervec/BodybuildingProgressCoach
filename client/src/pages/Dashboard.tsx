@@ -125,6 +125,21 @@ export function Dashboard() {
         {/* Pose readiness */}
         <div className="card">
           <p className="kicker" style={{ marginBottom: 14 }}>Pose readiness</p>
+          {(() => {
+            const shot = new Set(media.map((m) => m.pose_type).filter(Boolean));
+            const all = posesForCategory(current.category);
+            const covered = all.filter((p) => shot.has(p.id)).length;
+            return (
+              <p className="tiny muted" style={{ marginBottom: 12 }}>
+                <b style={{ color: covered === all.length ? 'var(--good)' : 'var(--text-dim)' }}>
+                  {covered} of {all.length}
+                </b>{' '}
+                mandatories photographed{covered < all.length && (
+                  <> — <Link to="/mirror">practice the rest in the Mirror →</Link></>
+                )}
+              </p>
+            );
+          })()}
           {poseScores.some((p) => p.score != null) ? (
             <>
               {poseScores.map((p) => (

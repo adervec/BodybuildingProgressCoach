@@ -6,15 +6,16 @@ import type { Landmark } from './types';
 const WASM_BASE = `${import.meta.env.BASE_URL}mediapipe/wasm`;
 const MODEL_URL = `${import.meta.env.BASE_URL}mediapipe/models/pose_landmarker_lite.task`;
 
-let landmarkerPromise: Promise<PoseLandmarker> | null = null;
+type Mode = 'IMAGE' | 'VIDEO';
+const landmarkers: Partial<Record<Mode, Promise<PoseLandmarker>>> = {};
 
-async function getLandmarker(): Promise<PoseLandmarker> {
-  if (!landmarkerPromise) {
-    landmarkerPromise = (async () => {
+function getLandmarker(mode: Mode): Promise<PoseLandmarker> {
+  if (!landmarkers[mode]) {
+    landmarkers[mode] = (async () => {
       const fileset = await FilesetResolver.forVisionTasks(WASM_BASE);
       const opts = {
         baseOptions: { modelAssetPath: MODEL_URL },
-        runningMode: 'IMAGE' as const,
+        runningMode: mode,
         numPoses: 1,
         minPoseDetectionConfidence: 0.4,
         minPosePresenceConfidence: 0.4,
@@ -34,7 +35,7 @@ async function getLandmarker(): Promise<PoseLandmarker> {
       }
     })();
   }
-  return landmarkerPromise;
+  return landmarkers[mode]!;
 }
 
 export interface DetectResult {
@@ -43,22 +44,29 @@ export interface DetectResult {
   height: number;
 }
 
+function toLandmarks(res: { landmarks?: { x: number; y: number; z?: number; visibility?: number }[][] }): Landmark[] | null {
+  if (!res.landmarks || res.landmarks.length === 0) return null;
+  return res.landmarks[0].map((p) => ({ x: p.x, y: p.y, z: p.z ?? 0, visibility: p.visibility ?? 1 }));
+}
+
 /** Run single-person pose detection on a loaded image or canvas. */
 export async function detectPose(
   source: HTMLImageElement | HTMLCanvasElement
 ): Promise<DetectResult | null> {
-  const lm = await getLandmarker();
-  const res = lm.detect(source);
-  if (!res.landmarks || res.landmarks.length === 0) return null;
-  const landmarks: Landmark[] = res.landmarks[0].map((p) => ({
-    x: p.x,
-    y: p.y,
-    z: p.z ?? 0,
-    visibility: p.visibility ?? 1,
-  }));
+  const lm = await getLandmarker('IMAGE');
+  const landmarks = toLandmarks(lm.detect(source));
+  if (!landmarks) return null;
   const width = (source as HTMLImageElement).naturalWidth || (source as HTMLCanvasElement).width;
   const height = (source as HTMLImageElement).naturalHeight || (source as HTMLCanvasElement).height;
   return { landmarks, width, height };
+}
+
+/** Live detection on a playing <video>. Timestamps must increase monotonically (use performance.now()). */
+export async function detectPoseVideo(video: HTMLVideoElement, timestampMs: number): Promise<DetectResult | null> {
+  const lm = await getLandmarker('VIDEO');
+  const landmarks = toLandmarks(lm.detectForVideo(video, timestampMs));
+  if (!landmarks) return null;
+  return { landmarks, width: video.videoWidth, height: video.videoHeight };
 }
 
 /** Load an image URL into a fully-decoded HTMLImageElement. */
@@ -74,5 +82,5 @@ export function loadImage(url: string): Promise<HTMLImageElement> {
 
 /** Whether pose detection has been initialized (model downloaded). */
 export function detectorReady(): boolean {
-  return landmarkerPromise !== null;
+  return !!landmarkers.IMAGE || !!landmarkers.VIDEO;
 }

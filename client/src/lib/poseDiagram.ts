@@ -73,14 +73,16 @@ function renderFront(p: MaleSpec): string {
   return `<svg viewBox="0 0 ${VB.w} ${VB.h}" role="img" aria-label="pose figure">${s}</svg>`;
 }
 
-function renderSide(variant: 'chest' | 'triceps'): string {
+function renderSide(variant: 'chest' | 'triceps' | 'quarter'): string {
   let s = '';
   const id = variant;
   s += `<defs><radialGradient id="gs${id}" cx="50%" cy="32%" r="62%"><stop offset="0%" stop-color="rgba(231,196,122,.16)"/><stop offset="100%" stop-color="rgba(231,196,122,0)"/></radialGradient></defs>`;
   s += `<ellipse cx="100" cy="132" rx="94" ry="150" fill="url(#gs${id})"/>`;
   const hip: [number, number] = [100, 206];
-  const kneeF: [number, number] = [126, 250], footF: [number, number] = [136, 304];
-  const kneeB: [number, number] = [88, 262], footB: [number, number] = [82, 332];
+  // 'quarter' stands tall (a quarter-turn), the posed variants stagger the legs.
+  const posed = variant !== 'quarter';
+  const kneeF: [number, number] = posed ? [126, 250] : [106, 252], footF: [number, number] = posed ? [136, 304] : [108, 306];
+  const kneeB: [number, number] = posed ? [88, 262] : [92, 254], footB: [number, number] = posed ? [82, 332] : [90, 308];
   const baseY = Math.max(footF[1], footB[1]);
   s += `<path d="M${100 - 48} ${baseY + 8} L${100 + 50} ${baseY + 8} L${100 + 60} ${VB.h - 8} L${100 - 58} ${VB.h - 8} Z" class="plinth"/>`;
   s += `<line x1="${100 - 58}" y1="${VB.h - 8}" x2="${100 + 60}" y2="${VB.h - 8}" class="plinth-line"/>`;
@@ -100,13 +102,21 @@ function renderSide(variant: 'chest' | 'triceps'): string {
     s += limb(sN[0], sN[1], eN[0], eN[1], 15) + limb(eN[0], eN[1], hN[0], hN[1], 13);
     s += dot(eN[0], eN[1], 4) + dot(hN[0], hN[1], 7);
     s += `<path d="M106 148 Q124 156 124 172" class="det"/>`;
-  } else {
+  } else if (variant === 'triceps') {
     const sB: [number, number] = [96, 142], eB: [number, number] = [94, 190], hB: [number, number] = [88, 230];
     const sN: [number, number] = [108, 142], eN: [number, number] = [120, 182], hN: [number, number] = [92, 226];
     s += `<g class="far">` + limb(sB[0], sB[1], eB[0], eB[1], 15) + limb(eB[0], eB[1], hB[0], hB[1], 13) + dot(eB[0], eB[1], 4) + `</g>`;
     s += limb(sN[0], sN[1], eN[0], eN[1], 15) + limb(eN[0], eN[1], hN[0], hN[1], 13);
     s += dot(eN[0], eN[1], 4) + dot(hN[0], hN[1], 7);
     s += `<path d="M95 148 L92 190" class="det"/>`;
+  } else {
+    // Quarter turn: both arms trace the body's line, hanging long.
+    const sB: [number, number] = [96, 142], eB = P(sB[0], sB[1], 4, 42), hB = P(eB[0], eB[1], 2, 40);
+    const sN: [number, number] = [106, 142], eN = P(sN[0], sN[1], -3, 42), hN = P(eN[0], eN[1], -2, 40);
+    s += `<g class="far">` + limb(sB[0], sB[1], eB[0], eB[1], 13) + limb(eB[0], eB[1], hB[0], hB[1], 11) + dot(eB[0], eB[1], 4) + `</g>`;
+    s += limb(sN[0], sN[1], eN[0], eN[1], 13) + limb(eN[0], eN[1], hN[0], hN[1], 11);
+    s += dot(eN[0], eN[1], 4) + dot(hN[0], hN[1], 6);
+    s += `<path d="M100 150 L98 196" class="det"/>`;
   }
   s += dot(hip[0], hip[1], 4) + dot(kneeF[0], kneeF[1], 4);
   return `<svg viewBox="0 0 ${VB.w} ${VB.h}" role="img" aria-label="pose figure">${s}</svg>`;
@@ -192,6 +202,10 @@ const MALE: Record<string, MaleSpec> = {
   bdb: { id: 'bdb', ulA: -124, flA: 150, urA: 124, frA: -150, tlA: -7, clA: -2, trA: 7, crA: 2, facing: 'back' },
   bls: { id: 'bls', ulA: -74, flA: 20, urA: 74, frA: -20, tlA: -7, clA: -2, trA: 7, crA: 2, facing: 'back', spread: true },
   mm: { id: 'mm', ulA: -42, flA: 52, urA: 42, frA: -52, tlA: -9, clA: -3, trA: 9, crA: 3, facing: 'front', traps: true },
+  vacuum: { id: 'vac', ulA: -128, flA: 162, urA: 128, frA: -162, tlA: -7, clA: -2, trA: 7, crA: 2, facing: 'front' },
+  classic: { id: 'cls', ulA: -124, flA: 150, urA: 35, frA: 10, tlA: -14, clA: -4, trA: 8, crA: 3, facing: 'front' },
+  mpFront: { id: 'mpf', ulA: -10, flA: -6, urA: 40, frA: -40, tlA: -6, clA: -2, trA: 6, crA: 2, facing: 'front' },
+  mpBack: { id: 'mpb', ulA: -10, flA: -6, urA: 40, frA: -40, tlA: -6, clA: -2, trA: 6, crA: 2, facing: 'back' },
 };
 
 const FEMALE: Record<string, FemaleSpec> = {
@@ -199,10 +213,24 @@ const FEMALE: Record<string, FemaleSpec> = {
   backPose: { id: 'bp', shDX: 3, hipDX: -2, headDX: 4, armL: 'down', armR: 'hip', tlA: -12, clA: -6, trA: 6, crA: 2, facing: 'back' },
   figureFront: { id: 'fgr', armL: 'hip', armR: 'hip', tlA: -5, clA: -2, trA: 5, crA: 2, facing: 'front', spread: true },
   wpFDB: { id: 'wf', ulA: -124, flA: 150, urA: 124, frA: -150, tlA: -7, clA: -2, trA: 7, crA: 2, facing: 'front' },
+  wellnessFront: { id: 'wlf', shDX: -3, hipDX: 8, headDX: -2, armL: 'down', armR: 'hip', tlA: 12, clA: 6, trA: 2, crA: 1, facing: 'front' },
+  wellnessBack: { id: 'wlb', shDX: 2, hipDX: -2, headDX: 3, armL: 'hip', armR: 'down', tlA: -12, clA: -6, trA: 6, crA: 2, facing: 'back' },
+  figureBack: { id: 'fgb', armL: 'hip', armR: 'hip', tlA: -5, clA: -2, trA: 5, crA: 2, facing: 'back', spread: true },
+  wpRDB: { id: 'wrdb', ulA: -124, flA: 150, urA: 124, frA: -150, tlA: -7, clA: -2, trA: 7, crA: 2, facing: 'back' },
+  wpAbsThighs: { id: 'wat', ulA: -128, flA: 162, urA: 128, frA: -162, tlA: -4, clA: -2, trA: 14, crA: 6, facing: 'front' },
+};
+
+/** Side poses share the profile mannequin; the female side poses reuse it — it's a stylized silhouette. */
+const SIDE: Record<string, 'chest' | 'triceps' | 'quarter'> = {
+  chest: 'chest',
+  triceps: 'triceps',
+  wpSideChest: 'chest',
+  wpSideTri: 'triceps',
+  figureSide: 'quarter',
 };
 
 export function renderPoseSVG(id: string): string {
-  if (id === 'chest' || id === 'triceps') return renderSide(id);
+  if (SIDE[id]) return renderSide(SIDE[id]);
   if (MALE[id]) return renderFront(MALE[id]);
   if (FEMALE[id]) return renderFemaleFront(FEMALE[id]);
   return '';
