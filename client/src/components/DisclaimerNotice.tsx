@@ -107,6 +107,13 @@ export function DisclaimerNotice() {
             </a>
             .
           </p>
+          <p className="tiny muted">
+            More apps by this maker —{' '}
+            <a href="https://adervec.github.io" target="_blank" rel="noopener noreferrer">
+              adervec.github.io
+            </a>
+            .
+          </p>
         </div>
 
         <div className="row spread" style={{ marginTop: 20 }}>
