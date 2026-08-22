@@ -218,6 +218,11 @@ const FEMALE: Record<string, FemaleSpec> = {
   figureBack: { id: 'fgb', armL: 'hip', armR: 'hip', tlA: -5, clA: -2, trA: 5, crA: 2, facing: 'back', spread: true },
   wpRDB: { id: 'wrdb', ulA: -124, flA: 150, urA: 124, frA: -150, tlA: -7, clA: -2, trA: 7, crA: 2, facing: 'back' },
   wpAbsThighs: { id: 'wat', ulA: -128, flA: 162, urA: 128, frA: -162, tlA: -4, clA: -2, trA: 14, crA: 6, facing: 'front' },
+  wbFDB: { id: 'wbf', ulA: -124, flA: 150, urA: 124, frA: -150, tlA: -7, clA: -2, trA: 7, crA: 2, facing: 'front' },
+  wbFLS: { id: 'wbfl', ulA: -74, flA: 20, urA: 74, frA: -20, tlA: -7, clA: -2, trA: 7, crA: 2, facing: 'front', spread: true },
+  wbBDB: { id: 'wbb', ulA: -124, flA: 150, urA: 124, frA: -150, tlA: -7, clA: -2, trA: 7, crA: 2, facing: 'back' },
+  wbBLS: { id: 'wbbl', ulA: -74, flA: 20, urA: 74, frA: -20, tlA: -7, clA: -2, trA: 7, crA: 2, facing: 'back', spread: true },
+  wbAbs: { id: 'wba', ulA: -128, flA: 162, urA: 128, frA: -162, tlA: -5, clA: -2, trA: 16, crA: 8, facing: 'front' },
 };
 
 /** Side poses share the profile mannequin; the female side poses reuse it — it's a stylized silhouette. */
@@ -227,6 +232,11 @@ const SIDE: Record<string, 'chest' | 'triceps' | 'quarter'> = {
   wpSideChest: 'chest',
   wpSideTri: 'triceps',
   figureSide: 'quarter',
+  bikiniSide: 'quarter',
+  wellnessSide: 'quarter',
+  mpSide: 'quarter',
+  wbSideChest: 'chest',
+  wbSideTri: 'triceps',
 };
 
 export function renderPoseSVG(id: string): string {

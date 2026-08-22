@@ -153,11 +153,11 @@ Then open **http://localhost:8787**. The container exposes a health check on `/a
 
 | Page | What it does |
 |------|--------------|
-| **Athletes** | Local profiles (no login). Category sets the theme + the division's actual mandatory pose list (24 poses across 8 divisions, from Men's Bodybuilding's eight call-outs to Bikini's two). |
+| **Athletes** | Local profiles (no login). Category sets the theme + the division's actual mandatory pose list (34 poses across 8 divisions, from Women's Bodybuilding's eight call-outs to Bikini's three). |
 | **Dashboard** | Latest body-comp KPIs + trend chart, per-pose readiness, "focus next", recent captures. |
 | **Capture** | Drag & drop photos/videos (or browse), tag pose + date; grab analyzable frames from videos. Dates come from each photo's own EXIF. |
 | **Pose Studio** | Ideal-form diagram + your detected-landmark overlay, objective score breakdown, optional AI coaching, per-pose history. |
-| **Mirror** | Live posing practice: your camera as a scoring mirror — real-time skeleton overlay + symmetry/form scores, a routine mode that auto-advances through your division's mandatories like judge's call-outs, and one-tap save of the best frame (with its analysis) into your library. All on-device. |
+| **Mirror** | Live posing practice: your camera as a scoring mirror — real-time skeleton overlay + symmetry/form scores, a routine mode that auto-advances through your division's mandatories like judge's call-outs (spoken aloud, with countdown beeps), a 3-second self-timer save, and optional auto-save of a frame at the end of every hold — run a whole round hands-free. All on-device. |
 | **Physique** | Log weight / body-fat / measurements (manual now; schema is smart-scale ready). Charts + history. |
 | **Compare** | Two dates of one pose, side by side, with metric deltas. |
 | **Timelapse** | Body-aligned, honest progress timelapse; in-app player + MP4 export (WebM where MP4 isn't supported). |

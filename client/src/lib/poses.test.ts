@@ -20,12 +20,12 @@ describe('pose library', () => {
   it('gives every division its judged pose count', () => {
     expect(posesForCategory('men_bodybuilding')).toHaveLength(8);
     expect(posesForCategory('classic_physique')).toHaveLength(6);
-    expect(posesForCategory('mens_physique')).toHaveLength(2);
-    expect(posesForCategory('bikini')).toHaveLength(2);
-    expect(posesForCategory('wellness')).toHaveLength(2);
+    expect(posesForCategory('mens_physique')).toHaveLength(3);
+    expect(posesForCategory('bikini')).toHaveLength(3);
+    expect(posesForCategory('wellness')).toHaveLength(3);
     expect(posesForCategory('figure')).toHaveLength(3);
     expect(posesForCategory('womens_physique')).toHaveLength(5);
-    expect(posesForCategory('womens_bodybuilding')).toHaveLength(6);
+    expect(posesForCategory('womens_bodybuilding')).toHaveLength(8);
   });
 
   it('renders a reference diagram for every pose', () => {

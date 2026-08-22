@@ -12,6 +12,31 @@ import { ScoreBar, BigScore } from '../components/Score';
 import { Icon } from '../components/Icon';
 import { todayISO } from '../lib/format';
 
+/** Judge's call-out, spoken. Native speech synthesis — silently absent where unsupported. */
+function speak(text: string) {
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+}
+
+/** A short tone, so you can follow the countdown without reading the screen from across the room. */
+let actx: AudioContext | null = null;
+function beep(freq = 880, ms = 90) {
+  try {
+    actx ??= new AudioContext();
+    void actx.resume();
+    const o = actx.createOscillator();
+    const g = actx.createGain();
+    o.frequency.value = freq;
+    g.gain.value = 0.08;
+    o.connect(g).connect(actx.destination);
+    o.start();
+    o.stop(actx.currentTime + ms / 1000);
+  } catch {
+    /* no audio output — the visuals still work */
+  }
+}
+
 interface LiveScores {
   form: number | null;
   symmetry: number | null;
@@ -29,6 +54,9 @@ export function Mirror() {
   const [routine, setRoutine] = useState(false);
   const [holdSecs, setHoldSecs] = useState(10);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [callouts, setCallouts] = useState(true);
+  const [autoSnap, setAutoSnap] = useState(false);
+  const [snapIn, setSnapIn] = useState<number | null>(null); // self-timer for a hands-free save
   const [live, setLive] = useState<LiveScores | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -66,6 +94,8 @@ export function Mirror() {
     ema.current = null;
     setOn(false);
     setLive(null);
+    setSnapIn(null);
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
   }
 
   // Detection loop: rAF-paced but self-throttling — the next frame is only
@@ -146,6 +176,34 @@ export function Mirror() {
     return () => clearInterval(iv);
   }, [on, routine, holdSecs, poses.length]);
 
+  // Call the pose aloud whenever the routine advances.
+  useEffect(() => {
+    if (on && routine && callouts && pose) speak(pose.label);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [poseIdx, on, routine]);
+
+  // Last three seconds of a hold tick audibly; a hold ending with auto-save fires the save.
+  const snapRef = useRef<() => Promise<void>>(async () => {});
+  useEffect(() => {
+    if (countdown == null) return;
+    if (countdown <= 3) beep(countdown === 1 ? 1320 : 880);
+    if (countdown === 1 && autoSnap) void snapRef.current();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [countdown]);
+
+  // Self-timer: 3…2…1 then save, so you can step back into the pose first.
+  useEffect(() => {
+    if (snapIn == null) return;
+    if (snapIn === 0) {
+      setSnapIn(null);
+      void snapRef.current();
+      return;
+    }
+    beep(snapIn === 1 ? 1320 : 880);
+    const t = setTimeout(() => setSnapIn(snapIn - 1), 1000);
+    return () => clearTimeout(t);
+  }, [snapIn]);
+
   useEffect(() => stop, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Save the current frame (un-mirrored) into the library, with its geometry analysis attached. */
@@ -189,6 +247,8 @@ export function Mirror() {
     }
   }
 
+  snapRef.current = snap;
+
   if (!current)
     return (
       <div>
@@ -202,7 +262,7 @@ export function Mirror() {
       <PageHead
         kicker="Mirror"
         title="Live posing practice"
-        lede="Your camera becomes a scoring mirror: hit the pose, watch symmetry and reference-form track in real time, and save the best frame straight into your library. Everything runs on this device — the video never leaves it."
+        lede="Your camera becomes a scoring mirror: hit the pose, watch symmetry and reference-form track in real time, and save the best frame straight into your library. Routine mode calls each pose aloud and can save a frame at the end of every hold — prop the phone up and run your whole round hands-free. Everything runs on this device; the video never leaves it."
       />
 
       <div className="grid" style={{ gridTemplateColumns: '300px 1fr', gap: 24, alignItems: 'start' }}>
@@ -232,6 +292,14 @@ export function Mirror() {
             <label className="row" style={{ gap: 8, marginBottom: 10, cursor: 'pointer' }}>
               <input type="checkbox" checked={routine} style={{ width: 'auto' }} onChange={(e) => setRoutine(e.target.checked)} />
               <span className="tiny">Auto-advance through all {poses.length} poses — judge's call-outs</span>
+            </label>
+            <label className="row" style={{ gap: 8, marginBottom: 10, cursor: 'pointer' }}>
+              <input type="checkbox" checked={callouts} style={{ width: 'auto' }} onChange={(e) => setCallouts(e.target.checked)} />
+              <span className="tiny">Call each pose aloud</span>
+            </label>
+            <label className="row" style={{ gap: 8, marginBottom: 10, cursor: 'pointer' }}>
+              <input type="checkbox" checked={autoSnap} style={{ width: 'auto' }} onChange={(e) => setAutoSnap(e.target.checked)} />
+              <span className="tiny">Auto-save a frame at the end of every hold</span>
             </label>
             <label className="field" style={{ marginBottom: 0 }}>
               <span className="lab">Hold each pose (seconds)</span>
@@ -264,9 +332,12 @@ export function Mirror() {
             {on && pose && (
               <div style={{ position: 'absolute', top: 10, left: 12, right: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', pointerEvents: 'none' }}>
                 <span className="pill" style={{ background: 'rgba(0,0,0,.55)', color: '#f3ecdd' }}>{pose.label}</span>
-                {countdown != null && (
-                  <span className="display" style={{ fontSize: 34, color: countdown <= 3 ? 'var(--bad)' : '#f3ecdd', textShadow: '0 1px 6px rgba(0,0,0,.7)' }}>
-                    {countdown}
+                {(snapIn ?? countdown) != null && (
+                  <span
+                    className="display"
+                    style={{ fontSize: snapIn != null ? 56 : 34, color: (snapIn ?? countdown!) <= 3 ? 'var(--bad)' : '#f3ecdd', textShadow: '0 1px 6px rgba(0,0,0,.7)' }}
+                  >
+                    {snapIn ?? countdown}
                   </span>
                 )}
               </div>
@@ -282,8 +353,11 @@ export function Mirror() {
           <div className="row" style={{ gap: 8, marginTop: 14 }}>
             {on && (
               <>
-                <button className="btn primary" onClick={snap} disabled={saving || !pose}>
-                  <Icon name="capture" size={14} /> {saving ? 'Saving…' : 'Save this frame'}
+                <button className="btn primary" onClick={() => setSnapIn(3)} disabled={saving || snapIn != null || !pose}>
+                  <Icon name="capture" size={14} /> {saving ? 'Saving…' : snapIn != null ? `Saving in ${snapIn}…` : 'Save in 3 s'}
+                </button>
+                <button className="btn" onClick={snap} disabled={saving || snapIn != null || !pose} title="Save the current frame immediately">
+                  Save now
                 </button>
                 <button className="btn" onClick={stop}>Stop</button>
               </>
