@@ -54,6 +54,11 @@ async function hydrate(m: MediaRow): Promise<MediaAsset> {
   return { ...m, url: (await blobUrl(m.file_name)) ?? '', thumb_url: await blobUrl(m.thumb_name) };
 }
 
+// Maker-portal character sheet: a check-in happened. Same-origin localStorage, nothing leaves the browser.
+function portalActivity(amount = 1): void {
+  try { const k = 'portal-activity', a = JSON.parse(localStorage.getItem(k) || '[]'); a.push([Math.round(Date.now() / 1000), 'BodybuildingProgressCoach', 'checkin', amount]); localStorage.setItem(k, JSON.stringify(a.slice(-2000))); } catch (_) { /* quota — ignore */ }
+}
+
 export const localApi = {
   status: async () => ({ ok: true, ai: { enabled: false, model: '' } }),
 
@@ -198,6 +203,7 @@ export const localApi = {
       fields: { captured_at?: string; pose_type?: string; division?: string; notes?: string },
       onProgress?: (pct: number) => void
     ): Promise<MediaAsset> => {
+      portalActivity();
       if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
         throw new Error('Only image and video files are supported.');
       }
@@ -320,6 +326,7 @@ export const localApi = {
     },
 
     create: async (athleteId: number, payload: Partial<BodyComp>): Promise<BodyComp> => {
+      portalActivity();
       if (!payload.measured_at) throw new Error('measured_at is required');
       const row = {
         athlete_id: athleteId,
