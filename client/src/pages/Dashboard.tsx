@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { useApp } from '../state/store';
@@ -9,6 +9,40 @@ import { PageHead, EmptyState } from '../components/Layout';
 import { ScoreBar, Delta } from '../components/Score';
 import { Icon } from '../components/Icon';
 import { shortDate, formatDate, scoreColor } from '../lib/format';
+
+// Folder cowork through the maker's shared panel (https://adervec.github.io/cowork.js, fs mode):
+// the panel drives a folder you pick; we hand it the numbers (body comp + pose scores — never photos)
+// as coach/request.json and show whatever an agent writes to coach/reply.json.
+type CoworkGlobal = { mount: (host: HTMLElement, cfg: unknown) => unknown };
+function loadCowork(): Promise<CoworkGlobal | null> {
+  const w = window as unknown as { cowork?: CoworkGlobal };
+  if (w.cowork) return Promise.resolve(w.cowork);
+  return new Promise((res) => {
+    const s = document.createElement('script');
+    s.src = 'https://adervec.github.io/cowork.js';
+    s.async = true;
+    s.onload = () => res(w.cowork ?? null);
+    s.onerror = () => res(null);
+    document.head.appendChild(s);
+  });
+}
+function djb2(text: string): string {
+  let h = 5381;
+  for (let i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0;
+  return h.toString(16);
+}
+const COACH_INSTRUCTIONS = `# Bodybuilding Progress Coach — coach channel
+
+Read \`coach/request.json\`: \`payload.athlete\` (name, category, height), \`payload.bodyComp\` (dated weight /
+body-fat / lean-mass / measurements, oldest first) and \`payload.poseScores\` (dated geometry scores per pose:
+form, symmetry, reference match). No photos travel. Write \`coach/reply.json\`:
+
+\`\`\`json
+{ "requestHash": "<copy the request's requestHash verbatim>",
+  "reply": "<honest, specific coaching in markdown: what the trends show, which pose or measurement to work on and how, what is clearly improving. Not medical advice; encouraging, no shaming.>" }
+\`\`\`
+`;
+const COACH_REPLY_KEY = 'bpc-coach-reply';
 
 export function Dashboard() {
   const { current } = useApp();
@@ -31,6 +65,48 @@ export function Dashboard() {
 
   const latest = comp.at(-1) ?? null;
   const prev = comp.length > 1 ? comp.at(-2)! : null;
+
+  // the shared cowork panel reads the freshest data through refs, so it never goes stale
+  const coworkHost = useRef<HTMLDivElement>(null);
+  const dataRef = useRef({ current, comp, analyses });
+  dataRef.current = { current, comp, analyses };
+  const [coachReply, setCoachReply] = useState(() => {
+    try { return localStorage.getItem(COACH_REPLY_KEY) || ''; } catch { return ''; }
+  });
+  useEffect(() => {
+    const host = coworkHost.current;
+    if (!host) return;
+    loadCowork().then((cw) => {
+      if (!cw || !host.isConnected || host.childElementCount) return;
+      cw.mount(host, {
+        app: 'bodybuildingprogresscoach',
+        manifest: { protocol: 'cowork-manifest', protocolVersion: 1, app: 'bodybuildingprogresscoach',
+          channels: [{ name: 'coach', request: ['coach/request.json'], instructions: 'coach/INSTRUCTIONS.md', replyPath: 'coach/reply.json' }] },
+        files: () => {
+          const d = dataRef.current;
+          const payload = {
+            athlete: d.current ? { name: d.current.name, category: d.current.category, heightCm: d.current.height_cm } : null,
+            bodyComp: d.comp.slice(-30).map((c) => ({ at: c.measured_at, weight: c.weight, unit: c.weight_unit, bodyFatPct: c.body_fat_pct,
+              leanMass: c.lean_mass, measurements: c.measurements })),
+            poseScores: d.analyses.slice(-40).map((a) => ({ at: a.captured_at ?? null, pose: a.pose_type ?? a.media_pose ?? null,
+              form: a.form_score, symmetry: a.symmetry_score, refMatch: a.ref_match_score, source: a.source })),
+          };
+          return {
+            'coach/request.json': { protocol: 'bodybuildingprogresscoach-coach', protocolVersion: 1, kind: 'coach-request',
+              generatedAt: new Date().toISOString(), requestHash: djb2(JSON.stringify(payload)), payload },
+            'coach/INSTRUCTIONS.md': COACH_INSTRUCTIONS,
+          };
+        },
+        apply: (_ch: string, reply: unknown) => {
+          const r = reply as { reply?: string; payload?: { reply?: string } } | string;
+          const text = typeof r === 'string' ? r : r?.reply ?? r?.payload?.reply ?? JSON.stringify(reply, null, 2);
+          try { localStorage.setItem(COACH_REPLY_KEY, text); } catch { /* quota */ }
+          setCoachReply(text);
+        },
+      });
+    });
+    return () => { host.replaceChildren(); };
+  }, []);
 
   const chartData = useMemo(
     () => comp.map((c) => ({ date: shortDate(c.measured_at), weight: c.weight, bf: c.body_fat_pct })),
@@ -184,6 +260,16 @@ export function Dashboard() {
         )}
       </div>
       {loading && <p className="muted tiny" style={{ marginTop: 16 }}>Loading…</p>}
+
+      <div style={{ marginTop: 24 }}>
+        <h3>Coach · folder cowork</h3>
+        <p className="muted tiny" style={{ marginBottom: 10 }}>
+          Hand the numbers — body comp and pose scores, never photos — to an agent through a folder (CoworkSyncHub,
+          Claude Desktop, or a person). The reply shows here. Nothing is uploaded.
+        </p>
+        <div ref={coworkHost} />
+        {coachReply && <pre className="card" style={{ whiteSpace: 'pre-wrap', marginTop: 10, font: 'inherit', fontSize: 13 }}>{coachReply}</pre>}
+      </div>
     </div>
   );
 }
