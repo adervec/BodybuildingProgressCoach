@@ -19,7 +19,7 @@
     "test": "npm run test -w client"
   },
   "devDependencies": {
-    "concurrently": "^9.1.0"
+    "concurrently": "^10.0.5"
   },
   "engines": {
     "node": ">=22"
