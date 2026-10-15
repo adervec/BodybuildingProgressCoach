@@ -48,7 +48,7 @@ jobs:
       # Publish the built SPA from one matrix leg so it can be downloaded / deployed.
       - name: Upload client build
         if: matrix.node == '24.x'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: client-dist
           path: client/dist
