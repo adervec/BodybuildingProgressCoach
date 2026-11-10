@@ -6,6 +6,7 @@
  */
 import { tx, get, getAll, put, byIndex, now } from './store';
 import { safeMediaName } from '../../../../server/src/lib/safeName';
+import { localDay } from '../../../../server/src/lib/localDay';
 
 export const BACKUP_APP = 'living-sculpture-backup';
 export const BACKUP_VERSION = 1;
@@ -108,7 +109,7 @@ export async function importBundle(bundle: unknown): Promise<ImportCounts> {
               mime: m.mime ?? null,
               width: m.width ?? null,
               height: m.height ?? null,
-              captured_at: m.captured_at || new Date().toISOString().slice(0, 10),
+              captured_at: m.captured_at || localDay(),
               pose_type: m.pose_type ?? null,
               division: m.division ?? null,
               notes: m.notes ?? null,

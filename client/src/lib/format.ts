@@ -23,8 +23,12 @@ export function shortDate(iso: string | undefined | null): string {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+import { localDay } from '../../../server/src/lib/localDay';
+export { localDay };
+
+/** Today as the user's local Y-M-D. */
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return localDay();
 }
 
 export function daysBetween(a: string, b: string): number {

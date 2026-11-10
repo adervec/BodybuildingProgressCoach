@@ -1,4 +1,5 @@
 import { db } from './db.js';
+import { localDay } from './lib/localDay.js';
 
 /**
  * Idempotent demo seed: two athletes (one men's bodybuilding → ink/bronze theme,
@@ -8,8 +9,8 @@ import { db } from './db.js';
 
 function isoWeeksAgo(weeks: number): string {
   const d = new Date();
-  d.setUTCDate(d.getUTCDate() - weeks * 7);
-  return d.toISOString().slice(0, 10);
+  d.setDate(d.getDate() - weeks * 7);
+  return localDay(d);
 }
 
 function reseedAthlete(name: string, category: string, height: number) {

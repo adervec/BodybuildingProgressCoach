@@ -7,7 +7,7 @@
 
 export type StoreName = 'athletes' | 'media' | 'blobs' | 'analyses' | 'bodycomp';
 
-const DB_NAME = 'living-sculpture';
+export const DB_NAME = 'living-sculpture';
 const DB_VERSION = 1;
 
 let dbp: Promise<IDBDatabase> | null = null;
@@ -39,6 +39,13 @@ export function db(): Promise<IDBDatabase> {
     req.onerror = () => reject(req.error ?? new Error('IndexedDB unavailable'));
   });
   return dbp;
+}
+
+/** Close the shared connection (so the database can be deleted); the next `db()` reopens it. */
+export async function closeDb(): Promise<void> {
+  const p = dbp;
+  dbp = null;
+  if (p) (await p.catch(() => null))?.close();
 }
 
 function wrap<T>(req: IDBRequest<T>): Promise<T> {

@@ -13,6 +13,22 @@ import {
 import { backupToProvider, restoreFromProvider, syncWithProvider } from '../lib/sync/syncManager';
 import { IS_STATIC } from '../api';
 import { storageEstimate } from '../lib/local/store';
+import { eraseEverything } from '../lib/local/erase';
+
+async function confirmErase(toast: (m: string) => void) {
+  const ok = window.confirm(
+    'Erase everything this app stores on this device — athletes, photos, video, analyses, measurements and settings?\n\n' +
+      'Cloud sync is disconnected. Your Google Drive / sync-folder copy is NOT touched, so you can restore from it later.\n\n' +
+      'This cannot be undone.'
+  );
+  if (!ok) return;
+  try {
+    await eraseEverything();
+    location.reload();
+  } catch (e) {
+    toast((e as Error).message);
+  }
+}
 
 const CFG_KEY = 'ls.sync';
 
@@ -230,6 +246,17 @@ export function Backup() {
           )}
         </div>
       </div>
+
+      {IS_STATIC && (
+        <div className="card" style={{ marginTop: 22 }}>
+          <p className="kicker" style={{ marginBottom: 10 }}>Erase this device</p>
+          <p className="tiny muted" style={{ marginBottom: 12 }}>
+            Removes everything this app keeps in this browser and disconnects sync. Your Drive or sync-folder copy is
+            not touched. Other apps on this site keep their data.
+          </p>
+          <button className="btn" disabled={!!busy} onClick={() => confirmErase(toast)}>Erase everything…</button>
+        </div>
+      )}
     </div>
   );
 }

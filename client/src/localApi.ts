@@ -10,6 +10,7 @@
 import type { Athlete, BodyComp, Category, MediaAsset, PoseAnalysis, PoseMetrics, Landmark } from './lib/types';
 import { tx, get, getAll, put, del, byIndex, now, blobUrl, forgetBlobUrl } from './lib/local/store';
 import { decode, thumbnail, videoPoster } from './lib/local/image';
+import { localDay } from '../../server/src/lib/localDay';
 
 interface MediaRow {
   id: number;
@@ -241,7 +242,7 @@ export const localApi = {
         mime: file.type || null,
         width,
         height,
-        captured_at: fields.captured_at || new Date().toISOString().slice(0, 10),
+        captured_at: fields.captured_at || localDay(),
         pose_type: fields.pose_type ?? null,
         division: fields.division ?? null,
         notes: fields.notes ?? null,

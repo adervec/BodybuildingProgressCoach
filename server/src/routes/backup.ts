@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import sharp from 'sharp';
 import { qAll, qGet, qRun, MEDIA_DIR, THUMB_DIR, type AthleteRow, type MediaRow, type AnalysisRow, type BodyCompRow } from '../db.js';
 import { safeMediaName } from '../lib/safeName.js';
+import { localDay } from '../lib/localDay.js';
 
 export const backupRouter = Router();
 
@@ -81,7 +82,7 @@ backupRouter.post('/backup/import', (req, res) => {
              VALUES(?,?,?,?,?,?,?,?,?,?,?,COALESCE(?, datetime('now')))`,
             [
               athleteId, m.kind === 'video' ? 'video' : 'photo', fileName, safeMediaName(m.thumb_name) ?? null, m.mime ?? null,
-              m.width ?? null, m.height ?? null, m.captured_at || new Date().toISOString().slice(0, 10),
+              m.width ?? null, m.height ?? null, m.captured_at || localDay(),
               m.pose_type ?? null, m.division ?? null, m.notes ?? null, m.created_at ?? null,
             ]
           ).lastInsertRowid

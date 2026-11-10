@@ -57,11 +57,12 @@ function idb(): Promise<IDBDatabase> {
 }
 async function getHandle(key: string): Promise<FileSystemDirectoryHandle | null> {
   const db = await idb();
-  return new Promise((resolve) => {
+  // Close after each use: an open connection would block deleteDatabase in "erase everything".
+  return new Promise<FileSystemDirectoryHandle | null>((resolve) => {
     const r = db.transaction('handles').objectStore('handles').get(key);
     r.onsuccess = () => resolve(r.result ?? null);
     r.onerror = () => resolve(null);
-  });
+  }).finally(() => db.close());
 }
 async function setHandle(key: string, value: FileSystemDirectoryHandle | null): Promise<void> {
   const db = await idb();
@@ -71,7 +72,9 @@ async function setHandle(key: string, value: FileSystemDirectoryHandle | null): 
     tx.oncomplete = resolve;
     tx.onerror = resolve;
   });
+  db.close();
 }
+export const SYNC_IDB_NAME = IDB_NAME;
 
 type PermHandle = FileSystemDirectoryHandle & {
   queryPermission(o: { mode: string }): Promise<string>;

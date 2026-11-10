@@ -4,6 +4,7 @@ import sharp from 'sharp';
 import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
+import { localDay } from '../lib/localDay.js';
 import { qAll, qGet, qRun, MEDIA_DIR, THUMB_DIR, parseJson, type MediaRow, type AnalysisRow } from '../db.js';
 
 export const mediaRouter = Router();
@@ -62,7 +63,7 @@ mediaRouter.post('/athletes/:id/media', upload.single('file'), async (req, res) 
       }
     }
 
-    const capturedAt: string = (req.body?.captured_at as string) || new Date().toISOString().slice(0, 10);
+    const capturedAt: string = (req.body?.captured_at as string) || localDay();
     const info = qRun(
       `INSERT INTO media_assets(athlete_id, kind, file_name, thumb_name, mime, width, height, captured_at, pose_type, division, notes)
        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,

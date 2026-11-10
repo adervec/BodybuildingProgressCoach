@@ -7,11 +7,7 @@
  * own timestamp — surfacing which one we used.
  */
 
-const pad = (n: number) => String(n).padStart(2, '0');
-const localISO = (ms: number) => {
-  const d = new Date(ms);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-};
+import { localDay as localISO } from '../../../server/src/lib/localDay';
 
 const ascii = (v: DataView, off: number, len: number) => {
   let s = '';
