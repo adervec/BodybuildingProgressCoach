@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { createElement, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { useApp } from '../state/store';
@@ -260,6 +260,12 @@ export function Dashboard() {
         )}
       </div>
       {loading && <p className="muted tiny" style={{ marginTop: 16 }}>Loading…</p>}
+
+      <div style={{ marginTop: 24 }}>
+        <h3>Font</h3>
+        {/* shared picker from https://adervec.github.io/font.js; the choice applies to every app by this maker */}
+        {createElement('app-font-picker')}
+      </div>
 
       <div style={{ marginTop: 24 }}>
         <h3>Coach · folder cowork</h3>

@@ -7,7 +7,7 @@
 
 :root,
 :root[data-theme='ink'] {
-  --serif: 'Spectral', Georgia, serif;
+  --serif: var(--app-font, 'Spectral', Georgia, serif); /* body text: the house font, Spectral if it cannot load */
   --display: 'Bodoni Moda', Didot, 'Times New Roman', serif;
   --mono: 'DM Mono', ui-monospace, monospace;
   --maxw: 1240px;
