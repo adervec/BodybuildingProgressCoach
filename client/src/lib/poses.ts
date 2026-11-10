@@ -379,6 +379,11 @@ export const CATEGORIES = Object.keys(CATEGORY_META) as Category[];
 export function categoryLabel(c: Category): string {
   return CATEGORY_META[c]?.label ?? c;
 }
+/** The page theme: the active athlete's division wins; with none chosen, follow the device (dark → ink). */
+export function pageTheme(c: Category | null | undefined, prefersDark: boolean): Theme {
+  return c ? themeFor(c) : prefersDark ? 'ink' : 'marble';
+}
+
 export function themeFor(c: Category): Theme {
   return CATEGORY_META[c]?.theme ?? 'ink';
 }
