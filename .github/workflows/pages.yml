@@ -31,6 +31,13 @@ jobs:
 
       - run: npm ci
 
+      # House standard: nothing reaches the live site unless the checks passed.
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm run test
+
       - name: Build the static client
         run: npm run build -w client
         env:
