@@ -9,6 +9,7 @@ import { PageHead, EmptyState } from '../components/Layout';
 import { ScoreBar, Delta } from '../components/Score';
 import { Icon } from '../components/Icon';
 import { shortDate, formatDate, scoreColor } from '../lib/format';
+import { coachChannel, COACH_REPLY_KEY } from '../lib/coachChannel';
 
 // Folder cowork through the maker's shared panel (https://adervec.github.io/cowork.js, fs mode):
 // the panel drives a folder you pick; we hand it the numbers (body comp + pose scores — never photos)
@@ -42,7 +43,6 @@ form, symmetry, reference match). No photos travel. Write \`coach/reply.json\`:
   "reply": "<honest, specific coaching in markdown: what the trends show, which pose or measurement to work on and how, what is clearly improving. Not medical advice; encouraging, no shaming.>" }
 \`\`\`
 `;
-const COACH_REPLY_KEY = 'bpc-coach-reply';
 
 export function Dashboard() {
   const { current } = useApp();
@@ -78,6 +78,7 @@ export function Dashboard() {
     if (!host) return;
     loadCowork().then((cw) => {
       if (!cw || !host.isConnected || host.childElementCount) return;
+      const coach = coachChannel(setCoachReply);
       cw.mount(host, {
         app: 'bodybuildingprogresscoach',
         manifest: { protocol: 'cowork-manifest', protocolVersion: 1, app: 'bodybuildingprogresscoach',
@@ -97,12 +98,9 @@ export function Dashboard() {
             'coach/INSTRUCTIONS.md': COACH_INSTRUCTIONS,
           };
         },
-        apply: (_ch: string, reply: unknown) => {
-          const r = reply as { reply?: string; payload?: { reply?: string } } | string;
-          const text = typeof r === 'string' ? r : r?.reply ?? r?.payload?.reply ?? JSON.stringify(reply, null, 2);
-          try { localStorage.setItem(COACH_REPLY_KEY, text); } catch { /* quota */ }
-          setCoachReply(text);
-        },
+        // v1 fallback; cowork v2 uses `channels` (review before applying, undo from the history)
+        apply: (_ch: string, reply: unknown) => coach.apply(reply),
+        channels: { coach },
       });
     });
     return () => { host.replaceChildren(); };
