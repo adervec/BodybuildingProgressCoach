@@ -212,6 +212,7 @@ async function fetchDriveProfile(token: string) {
     if (r.ok) {
       const j = (await r.json()) as { name?: string; picture?: string; email?: string };
       _driveProfile = { name: j.name || j.email || 'Google account', picture: j.picture || '', email: j.email || '' };
+      (window as unknown as { appFont?: { setAccount(a: unknown): void } }).appFont?.setAccount(_driveProfile); // house standard: picture always visible
     }
   } catch {
     /* cosmetic only */
@@ -298,6 +299,7 @@ export const googleDriveProvider: SyncProvider = {
   async disconnect() {
     _driveToken = null;
     _driveProfile = null;
+    (window as unknown as { appFont?: { setAccount(a: unknown): void } }).appFont?.setAccount(null);
   },
   async upload(conn: never, name: string, blob: Blob) {
     const c = conn as unknown as DriveConn;
