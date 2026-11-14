@@ -11,6 +11,7 @@ import { PoseDiagram } from '../components/PoseDiagram';
 import { ScoreBar, BigScore } from '../components/Score';
 import { Icon } from '../components/Icon';
 import { todayISO } from '../lib/format';
+import { requestPoseReview } from '../lib/poseReview';
 
 /** Judge's call-out, spoken. Native speech synthesis — silently absent where unsupported. */
 function speak(text: string) {
@@ -237,6 +238,7 @@ export function Mirror() {
           metrics: out.metrics,
           landmarks: res.landmarks,
         });
+        requestPoseReview();
       }
       toast(`Saved ${pose.label}${live?.form != null ? ` · form ${live.form}` : ''}`);
       await refreshAthletes();

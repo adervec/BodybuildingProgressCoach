@@ -12,6 +12,7 @@ import { LandmarkCanvas } from '../components/LandmarkCanvas';
 import { ScoreBar, BigScore } from '../components/Score';
 import { Icon } from '../components/Icon';
 import { shortDate, scoreColor } from '../lib/format';
+import { reviewFor, requestPoseReview, type PoseReview } from '../lib/poseReview';
 
 interface LocalAnalysis {
   landmarks: Landmark[] | null;
@@ -46,6 +47,17 @@ export function PoseStudio() {
   }, [current, poseId]);
 
   const selected = useMemo(() => media.find((m) => m.id === selId) ?? null, [media, selId]);
+
+  // The cowork AI review of this session, shown beside (never instead of) the app's own score.
+  const [reviewTick, setReviewTick] = useState(0);
+  useEffect(() => {
+    const bump = () => setReviewTick((n) => n + 1);
+    window.addEventListener('bpc-pose-reviews', bump);
+    window.addEventListener('storage', bump);
+    return () => { window.removeEventListener('bpc-pose-reviews', bump); window.removeEventListener('storage', bump); };
+  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const review = useMemo(() => reviewFor(selected?.file_name), [selected, reviewTick]);
 
   // When a photo is selected, pull any stored analysis.
   useEffect(() => {
@@ -91,6 +103,7 @@ export function PoseStudio() {
         landmarks: res.landmarks,
       });
       toast('Geometry analysis saved');
+      requestPoseReview();
     } catch (err) {
       toast((err as Error).message);
     } finally {
@@ -191,7 +204,10 @@ export function PoseStudio() {
 
                   <div className="card">
                     {analysis ? (
-                      <ScorePanel a={analysis} />
+                      <>
+                        <ScorePanel a={analysis} />
+                        {review && <ReviewPanel r={review} />}
+                      </>
                     ) : (
                       <p className="muted tiny">Run geometry analysis to measure symmetry, proportions and reference-form match for this photo.</p>
                     )}
@@ -270,6 +286,24 @@ function ScorePanel({ a }: { a: LocalAnalysis }) {
           ))}
         </>
       )}
+    </div>
+  );
+}
+
+function ReviewPanel({ r }: { r: PoseReview }) {
+  return (
+    <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--line, rgba(127,127,127,.25))' }}>
+      <div className="row spread" style={{ marginBottom: 6 }}>
+        <p className="kicker"><Icon name="ai" size={12} /> AI review</p>
+        <span className="pill">grade {r.grade}</span>
+      </div>
+      <div data-clamp="6">
+        <p className="tiny" style={{ color: 'var(--text-dim)' }}>{r.summary}</p>
+        {r.strengths.length > 0 && <Section title="Strengths">{r.strengths.map((s, i) => <li key={i}>{s}</li>)}</Section>}
+        {r.fixes.length > 0 && <Section title="Fix">{r.fixes.map((s, i) => <li key={i}>{s}</li>)}</Section>}
+        {r.next && <p className="tiny" style={{ marginTop: 8 }}><b>Next:</b> {r.next}</p>}
+      </div>
+      <p className="tiny muted" style={{ marginTop: 6 }}>From your cowork folder. The form score above is still the app's own.</p>
     </div>
   );
 }

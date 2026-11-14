@@ -7,7 +7,8 @@
 import { closeDb, DB_NAME } from './store';
 import { SYNC_PROVIDERS, SYNC_IDB_NAME } from '../sync/syncProviders';
 
-export const APP_KEYS = ['bpc.disclaimerAck.v1', 'bpc.currentAthleteId', 'ls.sync', 'ls.orientation', 'bpc-coach-reply'];
+export const APP_KEYS = ['bpc.disclaimerAck.v1', 'bpc.currentAthleteId', 'ls.sync', 'ls.orientation', 'bpc-coach-reply',
+  'bpc-pose-reviews', 'bpc-pose-review-due', 'cowork-state:bodybuildingprogresscoach'];
 export const APP_DBS = [DB_NAME, SYNC_IDB_NAME];
 const APP_NAME = 'BodybuildingProgressCoach';
 const APP_CACHE = /^ls-v\d+$/; // sw.js CACHE

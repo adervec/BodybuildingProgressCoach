@@ -10,11 +10,12 @@ import { ScoreBar, Delta } from '../components/Score';
 import { Icon } from '../components/Icon';
 import { shortDate, formatDate, scoreColor } from '../lib/format';
 import { coachChannel, COACH_REPLY_KEY } from '../lib/coachChannel';
+import { POSE_REVIEW_CHANNEL, POSE_REVIEW_INSTRUCTIONS, buildReviewPayload, poseReviewChannel, setCoworkPanel } from '../lib/poseReview';
 
 // Folder cowork through the maker's shared panel (https://adervec.github.io/cowork.js, fs mode):
 // the panel drives a folder you pick; we hand it the numbers (body comp + pose scores — never photos)
 // as coach/request.json and show whatever an agent writes to coach/reply.json.
-type CoworkGlobal = { mount: (host: HTMLElement, cfg: unknown) => unknown };
+type CoworkGlobal = { mount: (host: HTMLElement, cfg: unknown) => { push(only?: string): unknown } };
 function loadCowork(): Promise<CoworkGlobal | null> {
   const w = window as unknown as { cowork?: CoworkGlobal };
   if (w.cowork) return Promise.resolve(w.cowork);
@@ -79,12 +80,25 @@ export function Dashboard() {
     loadCowork().then((cw) => {
       if (!cw || !host.isConnected || host.childElementCount) return;
       const coach = coachChannel(setCoachReply);
-      cw.mount(host, {
+      const freshAnalyses = () => (dataRef.current.current ? api.analysis.series(dataRef.current.current.id) : Promise.resolve([]));
+      const poseReview = poseReviewChannel(freshAnalyses);
+      const panel = cw.mount(host, {
         app: 'bodybuildingprogresscoach',
         manifest: { protocol: 'cowork-manifest', protocolVersion: 1, app: 'bodybuildingprogresscoach',
-          channels: [{ name: 'coach', request: ['coach/request.json'], instructions: 'coach/INSTRUCTIONS.md', replyPath: 'coach/reply.json' }] },
-        files: () => {
+          channels: [
+            { name: 'coach', request: ['coach/request.json'], instructions: 'coach/INSTRUCTIONS.md', replyPath: 'coach/reply.json' },
+            { name: 'pose-review', request: ['pose-review/request.json'], instructions: 'pose-review/INSTRUCTIONS.md', replyPath: 'pose-review/reply.json' },
+          ] },
+        files: async (ch: string) => {
           const d = dataRef.current;
+          if (ch === POSE_REVIEW_CHANNEL) {
+            const payload = buildReviewPayload(d.current, await freshAnalyses());
+            return {
+              'pose-review/request.json': { protocol: 'bodybuildingprogresscoach-pose-review', protocolVersion: 1, kind: 'pose-review-request',
+                generatedAt: new Date().toISOString(), requestHash: djb2(JSON.stringify(payload)), payload },
+              'pose-review/INSTRUCTIONS.md': POSE_REVIEW_INSTRUCTIONS,
+            };
+          }
           const payload = {
             athlete: d.current ? { name: d.current.name, category: d.current.category, heightCm: d.current.height_cm } : null,
             bodyComp: d.comp.slice(-30).map((c) => ({ at: c.measured_at, weight: c.weight, unit: c.weight_unit, bodyFatPct: c.body_fat_pct,
@@ -99,11 +113,12 @@ export function Dashboard() {
           };
         },
         // v1 fallback; cowork v2 uses `channels` (review before applying, undo from the history)
-        apply: (_ch: string, reply: unknown) => coach.apply(reply),
-        channels: { coach },
+        apply: (ch: string, reply: unknown) => (ch === POSE_REVIEW_CHANNEL ? poseReview.apply(reply) : coach.apply(reply)),
+        channels: { coach, [POSE_REVIEW_CHANNEL]: poseReview },
       });
+      setCoworkPanel(panel);
     });
-    return () => { host.replaceChildren(); };
+    return () => { setCoworkPanel(null); host.replaceChildren(); };
   }, []);
 
   const chartData = useMemo(
