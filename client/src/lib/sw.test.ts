@@ -44,6 +44,14 @@ describe('service worker fetch routing', () => {
     });
   }
 
+  it('fetches translations from the network first, so an update is never stuck behind the cache', async () => {
+    let fetched = '';
+    const sw = loadSw(async (r) => { fetched = r.url; return { ok: true, type: 'basic', clone: () => ({}), body: 'fresh' }; });
+    const res = (await sw({ url: 'http://localhost:8787/locales/fr.json', method: 'GET' })) as { body: string };
+    expect(fetched).toBe('http://localhost:8787/locales/fr.json');
+    expect(res.body).toBe('fresh');
+  });
+
   it('serves the cached shell when a navigation fails offline', async () => {
     const sw = loadSw(async () => {
       throw new Error('offline');

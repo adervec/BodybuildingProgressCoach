@@ -13,6 +13,15 @@ import { ScoreBar, BigScore } from '../components/Score';
 import { Icon } from '../components/Icon';
 import { shortDate, scoreColor } from '../lib/format';
 import { reviewFor, requestPoseReview, type PoseReview } from '../lib/poseReview';
+import { t, fmt } from '../lib/i18n';
+
+/** Put React nodes into a translated sentence at its {placeholders} (so markup never splits a sentence). */
+function fill(text: string, parts: Record<string, React.ReactNode>): React.ReactNode[] {
+  return text.split(/(\{\w+\})/).map((bit, i) => {
+    const k = bit.slice(1, -1);
+    return bit.startsWith('{') && k in parts ? <span key={i}>{parts[k]}</span> : bit;
+  });
+}
 
 interface LocalAnalysis {
   landmarks: Landmark[] | null;
@@ -88,7 +97,7 @@ export function PoseStudio() {
       const img = await loadImage(selected.url);
       const res = await detectPose(img);
       if (!res) {
-        toast('No body detected — try a clearer, full-body photo.');
+        toast(t('No body detected — try a clearer, full-body photo.'));
         return;
       }
       const out = analyzePose(res.landmarks, res.width, res.height, pose);
@@ -102,7 +111,7 @@ export function PoseStudio() {
         metrics: out.metrics,
         landmarks: res.landmarks,
       });
-      toast('Geometry analysis saved');
+      toast(t('Geometry analysis saved'));
       requestPoseReview();
     } catch (err) {
       toast((err as Error).message);
@@ -121,7 +130,7 @@ export function PoseStudio() {
         objectiveMetrics: analysis?.metrics ?? undefined,
       });
       setAi(res.ai_feedback);
-      toast('AI coaching ready');
+      toast(t('AI coaching ready'));
     } catch (err) {
       toast((err as Error).message);
     } finally {
@@ -132,14 +141,14 @@ export function PoseStudio() {
   if (!current)
     return (
       <div>
-        <PageHead title="Pose Studio" lede="Select an athlete first." />
-        <Link to="/athletes" className="btn primary">Go to athletes</Link>
+        <PageHead title={t('Pose Studio')} lede={t('Select an athlete first.')} />
+        <Link to="/athletes" className="btn primary">{t('Go to athletes')}</Link>
       </div>
     );
 
   return (
     <div>
-      <PageHead kicker="Pose Studio" title={pose?.label ?? 'Select a pose'} lede={pose?.reveals} />
+      <PageHead kicker={t('Pose Studio')} title={pose?.label ?? t('Select a pose')} lede={pose?.reveals} />
 
       {/* Pose tabs */}
       <div className="row wrap" style={{ gap: 8, marginBottom: 22 }}>
@@ -153,16 +162,16 @@ export function PoseStudio() {
       <div className="grid" style={{ gridTemplateColumns: '300px 1fr', gap: 24, alignItems: 'start' }}>
         {/* Ideal diagram + criteria */}
         <div className="card">
-          <p className="kicker" style={{ marginBottom: 8 }}>Reference form</p>
+          <p className="kicker" style={{ marginBottom: 8 }}>{t('Reference form')}</p>
           {pose && <PoseDiagram poseId={pose.id} maxWidth={210} />}
           {pose && (
             <div style={{ marginTop: 16 }}>
-              <Criteria label="Judge sees" text={pose.judgeSees} />
-              <p className="kicker" style={{ margin: '14px 0 6px' }}>Execution</p>
+              <Criteria label={t('Judge sees')} text={pose.judgeSees} />
+              <p className="kicker" style={{ margin: '14px 0 6px' }}>{t('Execution')}</p>
               <ul className="stack" style={{ gap: 6, listStyle: 'none' }}>
                 {pose.cues.map((c, i) => (
-                  <li key={i} className="tiny muted" style={{ paddingLeft: 14, position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: 0, top: 7, width: 7, height: 1, background: 'var(--accent)' }} />
+                  <li key={i} className="tiny muted" style={{ paddingInlineStart: 14, position: 'relative' }}>
+                    <span style={{ position: 'absolute', insetInlineStart: 0, top: 7, width: 7, height: 1, background: 'var(--accent)' }} />
                     {c}
                   </li>
                 ))}
@@ -174,8 +183,8 @@ export function PoseStudio() {
         {/* Selected photo + analysis */}
         <div className="stack">
           {media.length === 0 ? (
-            <EmptyState title={`No ${pose?.label ?? ''} photos yet`}>
-              Add some in <Link to="/capture">Capture</Link> (tag them with this pose), then analyze them here.
+            <EmptyState title={t('No {pose} photos yet', { pose: pose?.label ?? '' })}>
+              {fill(t('Add some in {capture} (tag them with this pose), then analyze them here.'), { capture: <Link to="/capture">{t('Capture')}</Link> })}
             </EmptyState>
           ) : (
             <>
@@ -198,7 +207,7 @@ export function PoseStudio() {
                   <div className="card">
                     <LandmarkCanvas imageUrl={selected.url} landmarks={analysis?.landmarks ?? null} />
                     <button className="btn primary" style={{ marginTop: 14, width: '100%' }} onClick={runGeometry} disabled={detecting}>
-                      <Icon name="pose" size={14} /> {detecting ? 'Analyzing… (first run loads the model)' : analysis ? 'Re-run geometry analysis' : 'Analyze pose geometry'}
+                      <Icon name="pose" size={14} /> {detecting ? t('Analyzing… (first run loads the model)') : analysis ? t('Re-run geometry analysis') : t('Analyze pose geometry')}
                     </button>
                   </div>
 
@@ -209,7 +218,7 @@ export function PoseStudio() {
                         {review && <ReviewPanel r={review} />}
                       </>
                     ) : (
-                      <p className="muted tiny">Run geometry analysis to measure symmetry, proportions and reference-form match for this photo.</p>
+                      <p className="muted tiny">{t('Run geometry analysis to measure symmetry, proportions and reference-form match for this photo.')}</p>
                     )}
                   </div>
                 </div>
@@ -218,23 +227,25 @@ export function PoseStudio() {
               {/* AI coaching */}
               <div className="card">
                 <div className="row spread" style={{ marginBottom: 10 }}>
-                  <p className="kicker"><Icon name="ai" size={12} /> AI coach {aiEnabled ? `· ${aiModel}` : ''}</p>
+                  <p className="kicker"><Icon name="ai" size={12} /> {t('AI coach')} {aiEnabled ? `· ${aiModel}` : ''}</p>
                   {aiEnabled && selected && (
                     <button className="btn sm" onClick={runAi} disabled={aiBusy}>
-                      {aiBusy ? 'Thinking…' : ai ? 'Re-analyze' : 'Get AI coaching'}
+                      {aiBusy ? t('Thinking…') : ai ? t('Re-analyze') : t('Get AI coaching')}
                     </button>
                   )}
                 </div>
                 {!aiEnabled ? (
                   <p className="tiny muted">
-                    Optional AI coaching is disabled. Add <span className="mono">ANTHROPIC_API_KEY</span> to <span className="mono">server/.env</span> to
-                    enable an honest, criteria-based written critique. The local geometry analysis above is always available and fully private.
+                    {fill(t('Optional AI coaching is disabled. Add {key} to {file} to enable an honest, criteria-based written critique. The local geometry analysis above is always available and fully private.'), {
+                      key: <span className="mono">ANTHROPIC_API_KEY</span>,
+                      file: <span className="mono">server/.env</span>,
+                    })}
                   </p>
                 ) : ai ? (
                   <AiPanel ai={ai} />
                 ) : (
                   <p className="tiny muted">
-                    Runs the selected photo against the same judging rubric. Note: this sends the photo to Anthropic for that one request.
+                    {t('Runs the selected photo against the same judging rubric. Note: this sends the photo to Anthropic for that one request.')}
                   </p>
                 )}
               </div>
@@ -259,29 +270,30 @@ function ScorePanel({ a }: { a: LocalAnalysis }) {
   const m = a.metrics;
   return (
     <div>
-      <BigScore value={a.form_score} caption={a.form_score == null ? 'Not geometrically scored' : 'Form score'} />
+      <BigScore value={a.form_score} caption={a.form_score == null ? t('Not geometrically scored') : t('Form score')} />
       <div style={{ marginTop: 18 }}>
-        <ScoreBar label="Symmetry" value={a.symmetry_score} hint="Left/right balance — reproducible from your landmarks." />
-        <ScoreBar label="Reference-form" value={a.ref_match_score} hint="Closeness of joint angles to the guide's stylized ideal." />
+        <ScoreBar label={t('Symmetry')} value={a.symmetry_score} hint={t('Left/right balance — reproducible from your landmarks.')} />
+        <ScoreBar label={t('Reference-form')} value={a.ref_match_score} hint={t("Closeness of joint angles to the guide's stylized ideal.")} />
       </div>
       {m && (
         <>
           <div className="row wrap" style={{ gap: 14, marginTop: 14, fontFamily: 'var(--mono)', fontSize: 12 }}>
-            <Metric label="Shoulder : waist" value={m.vTaper.toFixed(2)} />
-            <Metric label="Shoulder width" value={m.shoulderWidth.toFixed(2)} />
-            <Metric label="Hip width" value={m.hipWidth.toFixed(2)} />
-            <Metric label="Confidence" value={`${Math.round((m.confidence ?? 0) * 100)}%`} />
+            <Metric label={t('Shoulder : waist')} value={fmt.fixed(m.vTaper, 2)} />
+            <Metric label={t('Shoulder width')} value={fmt.fixed(m.shoulderWidth, 2)} />
+            <Metric label={t('Hip width')} value={fmt.fixed(m.hipWidth, 2)} />
+            <Metric label={t('Confidence')} value={fmt.percent(m.confidence ?? 0)} />
           </div>
           <details style={{ marginTop: 12 }}>
-            <summary className="tiny mono" style={{ cursor: 'pointer', color: 'var(--accent)' }}>Symmetry detail</summary>
+            <summary className="tiny mono" style={{ cursor: 'pointer', color: 'var(--accent)' }}>{t('Symmetry detail')}</summary>
             <div className="tiny muted" style={{ fontFamily: 'var(--mono)', marginTop: 8, lineHeight: 1.8 }}>
-              shoulder tilt {m.symmetry.shoulderTilt}° · hip tilt {m.symmetry.hipTilt}° · arm Δ {m.symmetry.armElevationDiff}° · elbow Δ{' '}
-              {m.symmetry.elbowAngleDiff}° · leg Δ {m.symmetry.legAngleDiff}°
+              {t('shoulder tilt {shoulder}° · hip tilt {hip}° · arm Δ {arm}° · elbow Δ {elbow}° · leg Δ {leg}°', {
+                shoulder: fmt.number(m.symmetry.shoulderTilt, 1), hip: fmt.number(m.symmetry.hipTilt, 1), arm: fmt.number(m.symmetry.armElevationDiff, 1),
+                elbow: fmt.number(m.symmetry.elbowAngleDiff, 1), leg: fmt.number(m.symmetry.legAngleDiff, 1) })}
             </div>
           </details>
           {m.notes.map((n, i) => (
             <p key={i} className="tiny" style={{ marginTop: 10, color: 'var(--text-dim)', fontStyle: 'italic' }}>
-              {n}
+              {t(n)}
             </p>
           ))}
         </>
@@ -294,16 +306,16 @@ function ReviewPanel({ r }: { r: PoseReview }) {
   return (
     <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--line, rgba(127,127,127,.25))' }}>
       <div className="row spread" style={{ marginBottom: 6 }}>
-        <p className="kicker"><Icon name="ai" size={12} /> AI review</p>
-        <span className="pill">grade {r.grade}</span>
+        <p className="kicker"><Icon name="ai" size={12} /> {t('AI review')}</p>
+        <span className="pill">{t('grade {grade}', { grade: r.grade })}</span>
       </div>
       <div data-clamp="6">
         <p className="tiny" style={{ color: 'var(--text-dim)' }}>{r.summary}</p>
-        {r.strengths.length > 0 && <Section title="Strengths">{r.strengths.map((s, i) => <li key={i}>{s}</li>)}</Section>}
-        {r.fixes.length > 0 && <Section title="Fix">{r.fixes.map((s, i) => <li key={i}>{s}</li>)}</Section>}
-        {r.next && <p className="tiny" style={{ marginTop: 8 }}><b>Next:</b> {r.next}</p>}
+        {r.strengths.length > 0 && <Section title={t('Strengths')}>{r.strengths.map((s, i) => <li key={i}>{s}</li>)}</Section>}
+        {r.fixes.length > 0 && <Section title={t('Fix')}>{r.fixes.map((s, i) => <li key={i}>{s}</li>)}</Section>}
+        {r.next && <p className="tiny" style={{ marginTop: 8 }}><b>{t('Next:')}</b> {r.next}</p>}
       </div>
-      <p className="tiny muted" style={{ marginTop: 6 }}>From your cowork folder. The form score above is still the app's own.</p>
+      <p className="tiny muted" style={{ marginTop: 6 }}>{t("From your cowork folder. The form score above is still the app's own.")}</p>
     </div>
   );
 }
@@ -321,30 +333,30 @@ function AiPanel({ ai }: { ai: AiCoaching }) {
   return (
     <div className="stack" style={{ gap: 14 }}>
       <p style={{ fontStyle: 'italic' }}>{ai.overall_impression}</p>
-      <div className="banner tiny">Pose match: {ai.estimated_pose_match}</div>
-      <Section title="Strengths">
+      <div className="banner tiny">{t('Pose match: {match}', { match: ai.estimated_pose_match })}</div>
+      <Section title={t('Strengths')}>
         {ai.strengths.map((s, i) => (
           <li key={i}><b>{s.area}.</b> {s.note}</li>
         ))}
       </Section>
-      <Section title="Improvements">
+      <Section title={t('Improvements')}>
         {ai.improvements.map((s, i) => (
           <li key={i}>
-            <span className="pill" style={{ marginRight: 8, color: s.priority === 'high' ? 'var(--bad)' : s.priority === 'medium' ? 'var(--warn)' : 'var(--text-dim)' }}>{s.priority}</span>
+            <span className="pill" style={{ marginInlineEnd: 8, color: s.priority === 'high' ? 'var(--bad)' : s.priority === 'medium' ? 'var(--warn)' : 'var(--text-dim)' }}>{s.priority}</span>
             <b>{s.area}.</b> {s.note}
           </li>
         ))}
       </Section>
       {ai.pose_specific_cues.length > 0 && (
-        <Section title="Drill these cues">
+        <Section title={t('Drill these cues')}>
           {ai.pose_specific_cues.map((c, i) => (
             <li key={i}>{c}</li>
           ))}
         </Section>
       )}
-      {ai.conditioning_notes && <p className="tiny muted">Conditioning: {ai.conditioning_notes}</p>}
+      {ai.conditioning_notes && <p className="tiny muted">{t('Conditioning: {notes}', { notes: ai.conditioning_notes })}</p>}
       <p className="tiny" style={{ color: 'var(--text-mute)', fontStyle: 'italic' }}>
-        Caveats: {ai.honesty_caveats} · confidence {Math.round((ai.confidence ?? 0) * 100)}% · model {ai.model}
+        {t('Caveats: {caveats} · confidence {confidence} · model {model}', { caveats: ai.honesty_caveats, confidence: fmt.percent(ai.confidence ?? 0), model: ai.model })}
       </p>
     </div>
   );

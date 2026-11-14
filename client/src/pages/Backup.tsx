@@ -14,12 +14,15 @@ import { backupToProvider, restoreFromProvider, syncWithProvider } from '../lib/
 import { IS_STATIC } from '../api';
 import { storageEstimate } from '../lib/local/store';
 import { eraseEverything } from '../lib/local/erase';
+import { t, fmt } from '../lib/i18n';
 
 async function confirmErase(toast: (m: string) => void) {
   const ok = window.confirm(
-    'Erase everything this app stores on this device — athletes, photos, video, analyses, measurements and settings?\n\n' +
-      'Cloud sync is disconnected. Your Google Drive / sync-folder copy is NOT touched, so you can restore from it later.\n\n' +
-      'This cannot be undone.'
+    t('Erase everything this app stores on this device — athletes, photos, video, analyses, measurements and settings?') +
+      '\n\n' +
+      t('Cloud sync is disconnected. Your Google Drive / sync-folder copy is NOT touched, so you can restore from it later.') +
+      '\n\n' +
+      t('This cannot be undone.')
   );
   if (!ok) return;
   try {
@@ -60,9 +63,9 @@ export function Backup() {
   }, []);
 
   const provider = getSyncProvider(cfg.provider);
-  const gate = provider?.available(cfg) ?? { ok: false as const, reason: 'Unknown target.' };
+  const gate = provider?.available(cfg) ?? { ok: false as const, reason: t('Unknown target.') };
 
-  const onProgress = (done: number, total: number) => setProgress(total ? `media ${done}/${total}` : '');
+  const onProgress = (done: number, total: number) => setProgress(total ? t('media {done}/{total}', { done, total }) : '');
 
   const run = useCallback(
     async (label: string, fn: () => Promise<string>) => {
@@ -90,8 +93,8 @@ export function Backup() {
       const r = await syncWithProvider(cfg.provider, cfg, { onProgress });
       const a = r.added;
       const gained = a ? a.athletes + a.media + a.analyses + a.bodycomp : 0;
-      const m = r.media ? ` · media ↑${r.media.uploaded} ↓${r.media.downloaded}` : '';
-      return `Synced — ${gained ? `pulled ${gained} new record${gained === 1 ? '' : 's'}` : 'already up to date'}${m}`;
+      const m = r.media ? ' · ' + t('media ↑{up} ↓{down}', { up: r.media.uploaded, down: r.media.downloaded }) : '';
+      return (gained ? t.n('Synced — pulled {n} new record', 'Synced — pulled {n} new records', gained) : t('Synced — already up to date')) + m;
     });
 
   // Boot auto-sync: silent only — reuses an existing grant, never pops a sign-in on a timer.
@@ -113,24 +116,31 @@ export function Backup() {
   return (
     <div>
       <PageHead
-        kicker="Backup"
-        title="Sync & backup"
+        kicker={t('Backup')}
+        title={t('Sync & backup')}
         lede={
           IS_STATIC
-            ? 'This version keeps everything inside this browser, so backing up isn’t optional housekeeping — it’s how your work survives a cleared cache or a new device.'
-            : 'Your photos, analyses and measurements live in one folder on this machine. Copy them somewhere safe — and keep two devices in step — without any of it passing through a server of ours.'
+            ? t('This version keeps everything inside this browser, so backing up isn’t optional housekeeping — it’s how your work survives a cleared cache or a new device.')
+            : t('Your photos, analyses and measurements live in one folder on this machine. Copy them somewhere safe — and keep two devices in step — without any of it passing through a server of ours.')
         }
       />
 
       {IS_STATIC && (
         <p className="banner" style={{ marginBottom: 18 }}>
-          <b>Browser-only build.</b> Your data lives in this browser’s storage on this device — clearing site data erases
-          it. Back up here, and use the same backup to move between devices.
+          <b>{t('Browser-only build.')}</b>{' '}
+          {t('Your data lives in this browser’s storage on this device — clearing site data erases it. Back up here, and use the same backup to move between devices.')}
           {storage && storage.quota > 0 && (
             <>
               {' '}
-              Using {(storage.usage / 1e6).toFixed(0)} MB of roughly {(storage.quota / 1e9).toFixed(1)} GB available
-              {storage.persisted ? ' (storage marked persistent).' : '.'}
+              {storage.persisted
+                ? t('Using {used} of roughly {quota} available (storage marked persistent).', {
+                    used: fmt.unit(storage.usage / 1e6, 'megabyte', 0),
+                    quota: fmt.unit(storage.quota / 1e9, 'gigabyte', 1),
+                  })
+                : t('Using {used} of roughly {quota} available.', {
+                    used: fmt.unit(storage.usage / 1e6, 'megabyte', 0),
+                    quota: fmt.unit(storage.quota / 1e9, 'gigabyte', 1),
+                  })}
             </>
           )}
         </p>
@@ -138,15 +148,14 @@ export function Backup() {
 
       <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 22, alignItems: 'start' }}>
         <div className="card">
-          <p className="kicker" style={{ marginBottom: 14 }}>Target</p>
+          <p className="kicker" style={{ marginBottom: 14 }}>{t('Target')}</p>
 
           <label className="field">
-            <span className="lab">Sync to</span>
+            <span className="lab">{t('Sync to')}</span>
             <select value={cfg.provider} onChange={(e) => save({ ...cfg, provider: e.target.value })}>
               {SYNC_PROVIDERS.map((p) => (
                 <option key={p.id} value={p.id} disabled={!p.supported()}>
-                  {p.label}
-                  {p.supported() ? '' : ' — not supported in this browser'}
+                  {p.supported() ? t(p.label) : t('{label} — not supported in this browser', { label: t(p.label) })}
                 </option>
               ))}
             </select>
@@ -156,22 +165,21 @@ export function Backup() {
             <>
               {!driveOriginAllowed() && (
                 <label className="field">
-                  <span className="lab">Google OAuth client ID</span>
+                  <span className="lab">{t('Google OAuth client ID')}</span>
                   <input
                     value={cfg.driveClientId || ''}
                     placeholder="…apps.googleusercontent.com"
                     onChange={(e) => save({ ...cfg, driveClientId: e.target.value })}
                   />
                   <span className="tiny muted">
-                    This deployment isn’t on an authorized origin, so it needs its own client ID (Google Cloud →
-                    Credentials → OAuth client → Web application).
+                    {t('This deployment isn’t on an authorized origin, so it needs its own client ID (Google Cloud → Credentials → OAuth client → Web application).')}
                   </span>
                 </label>
               )}
               {profile && (
                 <div className="row" style={{ gap: 10, marginBottom: 12 }}>
                   {profile.picture && <img src={profile.picture} alt="" className="avatar" style={{ width: 28, height: 28 }} />}
-                  <span className="tiny muted">Signed in as {profile.email || profile.name}</span>
+                  <span className="tiny muted">{t('Signed in as {who}', { who: profile.email || profile.name })}</span>
                 </div>
               )}
             </>
@@ -179,26 +187,26 @@ export function Backup() {
 
           <label className="row" style={{ gap: 8, marginBottom: 10, cursor: 'pointer' }}>
             <input type="checkbox" checked={!!cfg.media} style={{ width: 'auto' }} onChange={(e) => save({ ...cfg, media: e.target.checked })} />
-            <span className="tiny">Include photos &amp; video (large — without this only your data syncs)</span>
+            <span className="tiny">{t('Include photos & video (large — without this only your data syncs)')}</span>
           </label>
           <label className="row" style={{ gap: 8, marginBottom: 16, cursor: 'pointer' }}>
             <input type="checkbox" checked={!!cfg.auto} style={{ width: 'auto' }} onChange={(e) => save({ ...cfg, auto: e.target.checked })} />
-            <span className="tiny">Sync automatically when the app starts</span>
+            <span className="tiny">{t('Sync automatically when the app starts')}</span>
           </label>
 
           {gate !== true && <p className="banner" style={{ marginBottom: 14 }}>{gate.reason}</p>}
 
           <button className="btn primary" style={{ width: '100%', marginBottom: 8 }} onClick={doSync} disabled={!!busy || gate !== true}>
-            <Icon name="timelapse" size={14} /> {busy === 'sync' ? progress || 'Syncing…' : 'Sync now'}
+            <Icon name="timelapse" size={14} /> {busy === 'sync' ? progress || t('Syncing…') : t('Sync now')}
           </button>
           <div className="row" style={{ gap: 8 }}>
             <button
               className="btn"
               style={{ flex: 1 }}
               disabled={!!busy || gate !== true}
-              onClick={() => run('backup', async () => `Backed up (${Math.ceil((await backupToProvider(cfg.provider, cfg)).bytes / 1024)} KB)`)}
+              onClick={() => run('backup', async () => t('Backed up ({size})', { size: fmt.unit(Math.ceil((await backupToProvider(cfg.provider, cfg)).bytes / 1024), 'kilobyte', 0) }))}
             >
-              Back up only
+              {t('Back up only')}
             </button>
             <button
               className="btn"
@@ -208,40 +216,37 @@ export function Backup() {
                 run('restore', async () => {
                   const a = (await restoreFromProvider(cfg.provider, cfg)).added;
                   const n = a ? a.athletes + a.media + a.analyses + a.bodycomp : 0;
-                  return n ? `Restored ${n} record${n === 1 ? '' : 's'}` : 'Nothing new to restore';
+                  return n ? t.n('Restored {n} record', 'Restored {n} records', n) : t('Nothing new to restore');
                 })
               }
             >
-              Restore only
+              {t('Restore only')}
             </button>
           </div>
           {cfg.lastSync ? (
-            <p className="tiny muted mono" style={{ marginTop: 12 }}>Last sync: {new Date(cfg.lastSync).toLocaleString()}</p>
+            <p className="tiny muted mono" style={{ marginTop: 12 }}>{t('Last sync: {when}', { when: fmt.dateTime(new Date(cfg.lastSync)) })}</p>
           ) : null}
         </div>
 
         <div className="card">
-          <p className="kicker" style={{ marginBottom: 14 }}>What travels</p>
+          <p className="kicker" style={{ marginBottom: 14 }}>{t('What travels')}</p>
           <p style={{ fontSize: 14, color: 'var(--text-dim)', marginBottom: 12 }}>
-            Google Drive sync writes to a <b>private app folder</b> — a hidden area of your Drive that only this app can
-            read. It can’t see the rest of your Drive, and your photos never touch a server of ours: your browser talks
-            to Google directly.
+            {t('Google Drive sync writes to a')} <b>{t('private app folder')}</b>{' '}
+            {t('— a hidden area of your Drive that only this app can read. It can’t see the rest of your Drive, and your photos never touch a server of ours: your browser talks to Google directly.')}
           </p>
           <table className="data">
             <tbody>
-              <tr><td>Athletes, analyses, measurements</td><td className="mono tiny">always</td></tr>
-              <tr><td>Photos &amp; video</td><td className="mono tiny">{cfg.media ? 'included' : 'excluded'}</td></tr>
-              <tr><td>Your Anthropic API key</td><td className="mono tiny">never</td></tr>
+              <tr><td>{t('Athletes, analyses, measurements')}</td><td className="mono tiny">{t('always')}</td></tr>
+              <tr><td>{t('Photos & video')}</td><td className="mono tiny">{cfg.media ? t('included') : t('excluded')}</td></tr>
+              <tr><td>{t('Your Anthropic API key')}</td><td className="mono tiny">{t('never')}</td></tr>
             </tbody>
           </table>
           <p className="tiny muted" style={{ marginTop: 14 }}>
-            Merging is by natural key — the same backup applied twice changes nothing, and two devices converge rather
-            than overwrite each other. Media files are immutable, so they’re only ever copied to the side that’s
-            missing them.
+            {t('Merging is by natural key — the same backup applied twice changes nothing, and two devices converge rather than overwrite each other. Media files are immutable, so they’re only ever copied to the side that’s missing them.')}
           </p>
           {cfg.provider === 'googleDrive' && driveOriginAllowed() && (
             <p className="tiny muted mono" style={{ marginTop: 12, wordBreak: 'break-all' }}>
-              client: {(cfg.driveClientId || BUILTIN_DRIVE_CLIENT_ID).slice(0, 28)}…
+              {t('client: {id}…', { id: (cfg.driveClientId || BUILTIN_DRIVE_CLIENT_ID).slice(0, 28) })}
             </p>
           )}
         </div>
@@ -249,12 +254,11 @@ export function Backup() {
 
       {IS_STATIC && (
         <div className="card" style={{ marginTop: 22 }}>
-          <p className="kicker" style={{ marginBottom: 10 }}>Erase this device</p>
+          <p className="kicker" style={{ marginBottom: 10 }}>{t('Erase this device')}</p>
           <p className="tiny muted" style={{ marginBottom: 12 }}>
-            Removes everything this app keeps in this browser and disconnects sync. Your Drive or sync-folder copy is
-            not touched. Other apps on this site keep their data.
+            {t('Removes everything this app keeps in this browser and disconnects sync. Your Drive or sync-folder copy is not touched. Other apps on this site keep their data.')}
           </p>
-          <button className="btn" disabled={!!busy} onClick={() => confirmErase(toast)}>Erase everything…</button>
+          <button className="btn" disabled={!!busy} onClick={() => confirmErase(toast)}>{t('Erase everything…')}</button>
         </div>
       )}
     </div>

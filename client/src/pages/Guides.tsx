@@ -7,8 +7,11 @@ import type { MediaAsset } from '../lib/types';
 import { attachDrop } from '../components/DropZone';
 import { captureDate } from '../lib/exif';
 import { shortDate } from '../lib/format';
+import { t } from '../lib/i18n';
 
 // BASE_URL so the guides resolve under a subpath too (the Pages build serves them from public/).
+// Labels stay English here (module load); translate where shown: t(g.label).
+// i18n-keys: The Sandow Plates (Men) | The Atalanta Plates (Women)
 const GUIDES = [
   { key: 'men', label: 'The Sandow Plates (Men)', src: `${import.meta.env.BASE_URL}guides/posing-guide.html` },
   { key: 'women', label: 'The Atalanta Plates (Women)', src: `${import.meta.env.BASE_URL}guides/posing-guide-women.html` },
@@ -47,13 +50,13 @@ export function Guides() {
 
   const upload = useCallback(
     async (poseId: string, files: File[]) => {
-      if (!current) return toast('Pick an athlete first');
+      if (!current) return toast(t('Pick an athlete first'));
       try {
         for (const f of files) {
           const cd = await captureDate(f);
           await api.media.upload(current.id, f, { captured_at: cd.date, pose_type: poseId, division: current.category });
         }
-        toast(`Added to ${poseLabel(poseId)}`);
+        toast(t('Added to {pose}', { pose: poseLabel(poseId) }));
         reload();
       } catch (err) {
         toast((err as Error).message);
@@ -92,10 +95,10 @@ export function Guides() {
         const img = doc.createElement('img');
         img.className = 'ls-shot';
         img.src = shot.url;
-        img.alt = `Your ${poseLabel(poseId)}, ${shortDate(shot.captured_at)}`;
+        img.alt = t('Your {pose}, {date}', { pose: poseLabel(poseId), date: shortDate(shot.captured_at) });
         const tag = doc.createElement('span');
         tag.className = 'ls-tag';
-        tag.textContent = `Your ${poseLabel(poseId)} · ${shortDate(shot.captured_at)}`;
+        tag.textContent = t('Your {pose} · {date}', { pose: poseLabel(poseId), date: shortDate(shot.captured_at) });
         fig.append(img, tag);
       }
       cleanups.push(attachDrop(fig, (files) => upload(poseId, files)));
@@ -106,7 +109,7 @@ export function Guides() {
       };
       fig.addEventListener('click', onClick);
       fig.style.cursor = 'pointer';
-      fig.title = `Add a photo of your ${poseLabel(poseId)}`;
+      fig.title = t('Add a photo of your {pose}', { pose: poseLabel(poseId) });
       cleanups.push(() => fig.removeEventListener('click', onClick));
     });
     return () => cleanups.forEach((fn) => fn());
@@ -117,24 +120,24 @@ export function Guides() {
   return (
     <div>
       <PageHead
-        kicker="Reference"
-        title="The Posing Guides"
-        lede="The same criteria and ideal forms this app scores against — read in full. Every analysis in the app traces back to these plates."
+        kicker={t('Reference')}
+        title={t('The Posing Guides')}
+        lede={t('The same criteria and ideal forms this app scores against — read in full. Every analysis in the app traces back to these plates.')}
       />
       <div className="row wrap" style={{ gap: 8, marginBottom: 12 }}>
         {GUIDES.map((g) => (
           <button key={g.key} className={`btn sm ${g.key === key ? 'primary' : ''}`} onClick={() => setKey(g.key)}>
-            {g.label}
+            {t(g.label)}
           </button>
         ))}
         <a className="btn sm" href={guide.src} target="_blank" rel="noreferrer">
-          Open in new tab ↗
+          {t('Open in new tab ↗')}
         </a>
       </div>
       <p className="tiny muted" style={{ marginBottom: 14 }}>
         {current
-          ? `Each plate's empty frame is filled with ${current.name}'s most recent shot of that pose — drop a photo onto a frame (or tap it) to add one, tagged automatically.`
-          : 'Pick an athlete to see your own photos set into the plates.'}
+          ? t("Each plate's empty frame is filled with {name}'s most recent shot of that pose — drop a photo onto a frame (or tap it) to add one, tagged automatically.", { name: current.name })
+          : t('Pick an athlete to see your own photos set into the plates.')}
       </p>
       <input
         ref={fileInput}
@@ -150,7 +153,7 @@ export function Guides() {
       />
       <iframe
         ref={frame}
-        title={guide.label}
+        title={t(guide.label)}
         src={guide.src}
         onLoad={() => setLoads((n) => n + 1)}
         style={{ width: '100%', height: '78vh', border: '1px solid var(--line)', borderRadius: 6, background: '#0c0b08' }}

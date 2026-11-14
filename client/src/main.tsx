@@ -3,11 +3,15 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './styles/theme.css';
 import './styles/app.css';
+import { i18nReady } from './lib/i18n';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+// Render once the chosen language's words are in, so the first paint is already translated.
+i18nReady().then(() =>
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  )
 );
 
 // Installable + offline in production builds only (a SW in dev just caches stale code).

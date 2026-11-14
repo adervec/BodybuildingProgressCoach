@@ -1,4 +1,5 @@
 import type { Category, Theme } from './types';
+import { t } from './i18n';
 
 export interface PoseDef {
   id: string;
@@ -363,6 +364,8 @@ export const WOMENS_POSES: PoseDef[] = [
 export const ALL_POSES: PoseDef[] = [...MENS_POSES, ...WOMENS_POSES];
 
 /** Each division's actual mandatory / judged pose list, in call-out order. */
+// Division labels stay English here (module load); categoryLabel() translates them.
+// i18n-keys: Men's Bodybuilding | Classic Physique | Men's Physique | Bikini | Wellness | Figure | Women's Physique | Women's Bodybuilding
 const CATEGORY_META: Record<Category, { label: string; theme: Theme; group: 'men' | 'women'; poses: string[] }> = {
   men_bodybuilding: { label: "Men's Bodybuilding", theme: 'ink', group: 'men', poses: ['fdb', 'fls', 'chest', 'triceps', 'bdb', 'bls', 'abs', 'mm'] },
   classic_physique: { label: 'Classic Physique', theme: 'ink', group: 'men', poses: ['fdb', 'chest', 'bdb', 'abs', 'vacuum', 'classic'] },
@@ -377,7 +380,7 @@ const CATEGORY_META: Record<Category, { label: string; theme: Theme; group: 'men
 export const CATEGORIES = Object.keys(CATEGORY_META) as Category[];
 
 export function categoryLabel(c: Category): string {
-  return CATEGORY_META[c]?.label ?? c;
+  return CATEGORY_META[c] ? t(CATEGORY_META[c].label) : c;
 }
 /** The page theme: the active athlete's division wins; with none chosen, follow the device (dark → ink). */
 export function pageTheme(c: Category | null | undefined, prefersDark: boolean): Theme {
@@ -400,5 +403,5 @@ export function findPose(id: string | null | undefined): PoseDef | undefined {
 }
 
 export function poseLabel(id: string | null | undefined): string {
-  return findPose(id)?.label ?? (id ? id : 'Untagged');
+  return findPose(id)?.label ?? (id ? id : t('Untagged'));
 }

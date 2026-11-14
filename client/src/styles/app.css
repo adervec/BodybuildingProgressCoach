@@ -12,7 +12,7 @@
 }
 
 .sidebar {
-  border-right: 1px solid var(--line);
+  border-inline-end: 1px solid var(--line);
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 5%, transparent), transparent 30%);
   min-height: 0;
   padding: 26px 22px;
@@ -193,7 +193,7 @@
 .thumb .badge {
   position: absolute;
   top: 8px;
-  left: 8px;
+  inset-inline-start: 8px;
   background: color-mix(in srgb, var(--accent) 88%, black);
   color: var(--on-accent);
   font-family: var(--mono);
@@ -235,7 +235,7 @@
 
 .banner {
   border: 1px solid var(--line);
-  border-left: 3px solid var(--accent);
+  border-inline-start: 3px solid var(--accent);
   background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 6%, transparent), transparent);
   padding: 14px 18px;
   border-radius: 4px;
@@ -263,7 +263,7 @@
 .scorebar-row .val {
   font-family: var(--display);
   font-size: 19px;
-  text-align: right;
+  text-align: end;
 }
 
 table.data {
@@ -277,7 +277,7 @@ table.data th {
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--accent);
-  text-align: left;
+  text-align: start;
   padding: 10px 12px;
   border-bottom: 1px solid var(--line);
 }
@@ -332,7 +332,7 @@ table.data tr:hover td {
   .sidebar.open {
     position: fixed;
     top: 0;
-    left: 0;
+    inset-inline-start: 0;
     bottom: 0;
     z-index: 9600;
     width: 274px;

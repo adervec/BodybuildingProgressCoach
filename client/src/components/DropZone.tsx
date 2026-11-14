@@ -1,4 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react';
+import { t } from '../lib/i18n';
 
 const isMedia = (f: File) => /^(image|video)\//.test(f.type);
 
@@ -9,7 +10,7 @@ const isMedia = (f: File) => /^(image|video)\//.test(f.type);
 export function DropZone({
   onFiles,
   className = '',
-  label = 'Drop photos or video here',
+  label,
   children,
 }: {
   onFiles: (files: File[]) => void;
@@ -48,7 +49,7 @@ export function DropZone({
     >
       {children}
       <div className="dropzone-veil" aria-hidden={!over}>
-        <span>{label}</span>
+        <span>{label ?? t('Drop photos or video here')}</span>
       </div>
     </div>
   );

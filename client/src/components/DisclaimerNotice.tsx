@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { t } from '../lib/i18n';
 
 const ACK_KEY = 'bpc.disclaimerAck.v1';
 const SHOW_EVENT = 'bpc:show-disclaimer';
@@ -69,46 +70,43 @@ export function DisclaimerNotice() {
     >
       <div className="disclaimer-modal card solid" onClick={(e) => e.stopPropagation()}>
         <p className="kicker" style={{ marginBottom: 10 }}>
-          Please read
+          {t('Please read')}
         </p>
         <h2 id="disclaimer-title" className="display" style={{ fontSize: 26, marginBottom: 14 }}>
-          An honest disclaimer
+          {t('An honest disclaimer')}
         </h2>
 
         <div className="stack" style={{ gap: 10 }}>
           <p>
-            <strong>Living Sculpture is a software tool — not medical, coaching, or legal advice</strong>{' '}
-            and not a substitute for a doctor, certified coach, or trainer. It's made by a software
-            developer, not a health professional.
+            <strong>{t('Living Sculpture is a software tool — not medical, coaching, or legal advice')}</strong>{' '}
+            {t("and not a substitute for a doctor, certified coach, or trainer. It's made by a software developer, not a health professional.")}
           </p>
           <p className="muted tiny">
-            Scores are reproducible <em>geometry</em>, not a verdict on your health or worth.
-            "Reference-form" targets are stylized teaching diagrams, not a real judging panel. The
-            optional AI critique is an automated opinion that can be wrong, and only runs — sending the
-            analyzed image to Anthropic — if you add your own API key. Posing and training carry a risk
-            of injury; train sensibly and consult a professional. Provided "as is," without warranty.
+            {t('Scores are reproducible')} <em>{t('geometry')}</em>
+            {t(', not a verdict on your health or worth.')}{' '}
+            {t('"Reference-form" targets are stylized teaching diagrams, not a real judging panel. The optional AI critique is an automated opinion that can be wrong, and only runs — sending the analyzed image to Anthropic — if you add your own API key. Posing and training carry a risk of injury; train sensibly and consult a professional. Provided "as is," without warranty.')}
           </p>
           <p className="tiny muted">
-            Full{' '}
+            {t('Full')}{' '}
             <a
               href="https://github.com/adervec/BodybuildingProgressCoach/blob/main/DISCLAIMER.md"
               target="_blank"
               rel="noreferrer"
             >
-              disclaimer
+              {t('disclaimer')}
             </a>{' '}
-            and{' '}
+            {t('and')}{' '}
             <a
               href="https://github.com/adervec/BodybuildingProgressCoach/blob/main/PRIVACY.md"
               target="_blank"
               rel="noreferrer"
             >
-              privacy notice
+              {t('privacy notice')}
             </a>
             .
           </p>
           <p className="tiny muted">
-            More apps by this maker —{' '}
+            {t('More apps by this maker —')}{' '}
             <a href="https://adervec.github.io" target="_blank" rel="noopener noreferrer">
               adervec.github.io
             </a>
@@ -118,12 +116,12 @@ export function DisclaimerNotice() {
 
         <div className="row spread" style={{ marginTop: 20 }}>
           {acked ? (
-            <span className="tiny muted">You've already acknowledged this.</span>
+            <span className="tiny muted">{t("You've already acknowledged this.")}</span>
           ) : (
-            <span className="tiny muted">Shown once — reopen anytime from the sidebar.</span>
+            <span className="tiny muted">{t('Shown once — reopen anytime from the sidebar.')}</span>
           )}
           <button className="btn primary" onClick={acknowledge} autoFocus>
-            {acked ? 'Close' : 'I understand'}
+            {acked ? t('Close') : t('I understand')}
           </button>
         </div>
       </div>

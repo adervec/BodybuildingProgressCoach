@@ -8,6 +8,7 @@ import { Icon } from '../components/Icon';
 import { loadImage } from '../lib/poseDetect';
 import { drawFrame, exportTimelapseWebm, extForMime, alignmentFromLandmarks, type TimelapseFrame } from '../lib/timelapse';
 import { formatDate } from '../lib/format';
+import { t, fmt } from '../lib/i18n';
 
 const W = 540;
 const H = 720;
@@ -42,7 +43,7 @@ export function Timelapse() {
     try {
       const list = await api.media.list(current.id, { pose_type: poseId, kind: 'photo' });
       if (!list.length) {
-        toast('No photos for this pose yet.');
+        toast(t('No photos for this pose yet.'));
         return;
       }
       const built: TimelapseFrame[] = [];
@@ -71,8 +72,8 @@ export function Timelapse() {
     if (!canvas || !fr[i]) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    const t = theme();
-    drawFrame(ctx, fr[i], W, H, { align, bg: t.bg, caption: true, accent: t.accent });
+    const th = theme();
+    drawFrame(ctx, fr[i], W, H, { align, bg: th.bg, caption: true, accent: th.accent });
   }
 
   // playback loop
@@ -98,15 +99,15 @@ export function Timelapse() {
     setExporting(0);
     setPlaying(false);
     try {
-      const t = theme();
-      const blob = await exportTimelapseWebm(frames, { width: 1080, height: 1440, holdMs, align, bg: t.bg, accent: t.accent, onProgress: (p) => setExporting(Math.round(p * 100)) });
+      const th = theme();
+      const blob = await exportTimelapseWebm(frames, { width: 1080, height: 1440, holdMs, align, bg: th.bg, accent: th.accent, onProgress: (p) => setExporting(Math.round(p * 100)) });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `${current?.name ?? 'athlete'}-${poseId}-timelapse.${extForMime(blob.type)}`.replace(/\s+/g, '_');
       a.click();
       URL.revokeObjectURL(url);
-      toast('Timelapse exported');
+      toast(t('Timelapse exported'));
     } catch (err) {
       toast((err as Error).message);
     } finally {
@@ -117,23 +118,26 @@ export function Timelapse() {
   if (!current)
     return (
       <div>
-        <PageHead title="Timelapse" lede="Select an athlete first." />
-        <Link to="/athletes" className="btn primary">Go to athletes</Link>
+        <PageHead title={t('Timelapse')} lede={t('Select an athlete first.')} />
+        <Link to="/athletes" className="btn primary">{t('Go to athletes')}</Link>
       </div>
     );
+
+  // The link sits inside one whole sentence; split the translation at its {link} placeholder.
+  const tip = t('Tip: analyze each photo in {link} first so alignment has landmarks to work with.').split('{link}');
 
   return (
     <div>
       <PageHead
-        kicker="Timelapse"
-        title="Progress in motion"
-        lede="Sequence one pose across every date you've shot it. Body-aligned framing keeps you the same size and centred frame-to-frame, so the change you see is real — not the camera moving."
+        kicker={t('Timelapse')}
+        title={t('Progress in motion')}
+        lede={t("Sequence one pose across every date you've shot it. Body-aligned framing keeps you the same size and centred frame-to-frame, so the change you see is real — not the camera moving.")}
       />
 
       <div className="grid" style={{ gridTemplateColumns: '320px 1fr', gap: 24, alignItems: 'start' }}>
         <div className="card">
           <label className="field">
-            <span className="lab">Pose</span>
+            <span className="lab">{t('Pose')}</span>
             <select value={poseId} onChange={(e) => setPoseId(e.target.value)}>
               {poses.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -143,40 +147,40 @@ export function Timelapse() {
             </select>
           </label>
           <label className="field">
-            <span className="lab">Seconds per frame</span>
+            <span className="lab">{t('Seconds per frame')}</span>
             <input type="range" min={200} max={1500} step={50} value={holdMs} onChange={(e) => setHoldMs(Number(e.target.value))} />
-            <span className="tiny muted mono">{(holdMs / 1000).toFixed(2)}s</span>
+            <span className="tiny muted mono">{t('{s} s', { s: fmt.fixed(holdMs / 1000, 2) })}</span>
           </label>
           <label className="row" style={{ gap: 8, marginBottom: 16, cursor: 'pointer' }}>
             <input type="checkbox" checked={align} style={{ width: 'auto' }} onChange={(e) => setAlign(e.target.checked)} />
-            <span className="tiny">Align by body (recommended — uses analyzed photos)</span>
+            <span className="tiny">{t('Align by body (recommended — uses analyzed photos)')}</span>
           </label>
           <button className="btn primary" style={{ width: '100%', marginBottom: 8 }} onClick={build} disabled={building}>
-            <Icon name="timelapse" size={14} /> {building ? 'Building…' : 'Build timelapse'}
+            <Icon name="timelapse" size={14} /> {building ? t('Building…') : t('Build timelapse')}
           </button>
           {frames.length > 0 && (
             <>
               <div className="row" style={{ gap: 8 }}>
                 <button className="btn" style={{ flex: 1 }} onClick={() => setPlaying((p) => !p)}>
-                  <Icon name="play" size={14} /> {playing ? 'Pause' : 'Play'}
+                  <Icon name="play" size={14} /> {playing ? t('Pause') : t('Play')}
                 </button>
                 <button className="btn" onClick={exportWebm} disabled={exporting != null}>
-                  <Icon name="download" size={14} /> {exporting != null ? `${exporting}%` : 'Export'}
+                  <Icon name="download" size={14} /> {exporting != null ? fmt.percent(exporting / 100) : t('Export')}
                 </button>
               </div>
-              <p className="tiny muted" style={{ marginTop: 10 }}>{frames.length} frames · exports a .webm video</p>
+              <p className="tiny muted" style={{ marginTop: 10 }}>{t.n('{n} frame · exports a .webm video', '{n} frames · exports a .webm video', frames.length)}</p>
             </>
           )}
           {align && (
             <p className="tiny muted" style={{ marginTop: 12 }}>
-              Tip: analyze each photo in <Link to="/pose">Pose Studio</Link> first so alignment has landmarks to work with.
+              {tip[0]}<Link to="/pose">{t('Pose Studio')}</Link>{tip[1]}
             </p>
           )}
         </div>
 
         <div className="card" style={{ display: 'grid', placeItems: 'center' }}>
           {frames.length === 0 ? (
-            <EmptyState title="No timelapse built yet">Pick a pose and press “Build timelapse”. You'll need at least two dated photos of that pose.</EmptyState>
+            <EmptyState title={t('No timelapse built yet')}>{t("Pick a pose and press “Build timelapse”. You'll need at least two dated photos of that pose.")}</EmptyState>
           ) : (
             <>
               <canvas ref={canvasRef} width={W} height={H} style={{ width: '100%', maxWidth: W, borderRadius: 6, border: '1px solid var(--line)' }} />

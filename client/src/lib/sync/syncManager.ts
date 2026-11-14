@@ -15,6 +15,7 @@
 import { getSyncProvider, DATA_FILE_NAME, type SyncConfig } from './syncProviders';
 import { IS_STATIC } from '../../api';
 import * as local from '../local/backup';
+import { t } from '../i18n';
 
 export interface SyncResult {
   at: number;
@@ -25,8 +26,8 @@ export interface SyncResult {
 
 async function connectTo(providerId: string, cfg: SyncConfig, opts: { silent?: boolean }) {
   const p = getSyncProvider(providerId);
-  if (!p) throw new Error('Unknown sync target.');
-  if (!p.supported()) throw new Error('This browser can’t use that sync target.');
+  if (!p) throw new Error(t('Unknown sync target.'));
+  if (!p.supported()) throw new Error(t('This browser can’t use that sync target.'));
   const gate = p.available(cfg);
   if (gate !== true) throw new Error(gate.reason);
   return { p, conn: (await p.connect(cfg, opts)) as never };
@@ -38,7 +39,7 @@ async function parseSyncBlob(blob: Blob): Promise<unknown> {
   try {
     return JSON.parse(text);
   } catch {
-    throw new Error('The sync file is corrupt or incomplete — back up again from a device that has your data.');
+    throw new Error(t('The sync file is corrupt or incomplete — back up again from a device that has your data.'));
   }
 }
 
@@ -47,7 +48,7 @@ const store = {
   async exportBundle(): Promise<unknown> {
     if (IS_STATIC) return local.exportBundle();
     const r = await fetch('/api/backup/export');
-    if (!r.ok) throw new Error(`Could not read your data (${r.status}).`);
+    if (!r.ok) throw new Error(t('Could not read your data ({status}).', { status: r.status }));
     return r.json();
   },
   async importBundle(bundle: unknown): Promise<SyncResult['added']> {
@@ -58,7 +59,7 @@ const store = {
       body: JSON.stringify(bundle),
     });
     const body = (await r.json().catch(() => ({}))) as { error?: string; added?: SyncResult['added'] };
-    if (!r.ok) throw new Error(body.error || `Restore failed (${r.status}).`);
+    if (!r.ok) throw new Error(body.error || t('Restore failed ({status}).', { status: r.status }));
     return body.added;
   },
   async manifest(): Promise<{ present: string[]; missing: string[] }> {
@@ -91,7 +92,7 @@ export async function backupToProvider(providerId: string, cfg: SyncConfig, opts
 export async function restoreFromProvider(providerId: string, cfg: SyncConfig, opts: { silent?: boolean } = {}): Promise<SyncResult> {
   const { p, conn } = await connectTo(providerId, cfg, opts);
   const blob = await p.download(conn, DATA_FILE_NAME);
-  if (!blob) throw new Error('No Living Sculpture backup found in that location yet — back up first.');
+  if (!blob) throw new Error(t('No Living Sculpture backup found in that location yet — back up first.'));
   const added = await store.importBundle(await parseSyncBlob(blob));
   return { at: Date.now(), bytes: blob.size, added };
 }

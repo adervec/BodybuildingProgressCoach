@@ -16,6 +16,8 @@
 //   • GOOGLE DRIVE — direct upload into a private app-data folder via Google Identity Services +
 //     the Drive REST API. Your browser talks to your Drive; nothing transits a server of ours.
 
+import { t } from '../i18n';
+
 export interface SyncConfig {
   provider: string;
   driveClientId?: string;
@@ -87,6 +89,8 @@ async function ensureDirPermission(handle: FileSystemDirectoryHandle | null, mod
   return (await h.requestPermission({ mode })) === 'granted';
 }
 
+// Provider labels stay English here (module load); translate where shown: t(p.label).
+// i18n-keys: Local folder (or a Drive / Dropbox sync folder) | Google Drive (private app folder)
 export const localFolderProvider: SyncProvider = {
   id: 'localFolder',
   label: 'Local folder (or a Drive / Dropbox sync folder)',
@@ -97,7 +101,7 @@ export const localFolderProvider: SyncProvider = {
     if (handle && (await ensureDirPermission(handle))) return handle;
     handle = await (window as unknown as { showDirectoryPicker(o: object): Promise<FileSystemDirectoryHandle> })
       .showDirectoryPicker({ id: 'living-sculpture-sync', mode: 'readwrite' });
-    if (!(await ensureDirPermission(handle))) throw new Error('Folder permission was denied.');
+    if (!(await ensureDirPermission(handle))) throw new Error(t('Folder permission was denied.'));
     await setHandle('syncDir', handle);
     return handle;
   },
@@ -186,7 +190,7 @@ function loadGis(): Promise<void> {
     s.src = 'https://accounts.google.com/gsi/client';
     s.async = true;
     s.onload = () => resolve();
-    s.onerror = () => reject(new Error('Could not load Google sign-in.'));
+    s.onerror = () => reject(new Error(t('Could not load Google sign-in.')));
     document.head.appendChild(s);
   });
   return gisLoaded;
@@ -211,7 +215,7 @@ async function fetchDriveProfile(token: string) {
     const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: `Bearer ${token}` } });
     if (r.ok) {
       const j = (await r.json()) as { name?: string; picture?: string; email?: string };
-      _driveProfile = { name: j.name || j.email || 'Google account', picture: j.picture || '', email: j.email || '' };
+      _driveProfile = { name: j.name || j.email || t('Google account'), picture: j.picture || '', email: j.email || '' };
       (window as unknown as { appFont?: { setAccount(a: unknown): void } }).appFont?.setAccount(_driveProfile); // house standard: picture always visible
     }
   } catch {
@@ -229,10 +233,10 @@ function requestToken(clientId: string, prompt = ''): Promise<string> {
         if (resp?.access_token) {
           _driveToken = { value: resp.access_token, exp: Date.now() + (resp.expires_in || 3600) * 1000 };
           resolve(resp.access_token);
-        } else reject(new Error(resp?.error || 'Sign-in failed.'));
+        } else reject(new Error(resp?.error || t('Sign-in failed.')));
       },
       // Without this the promise hangs when the popup is dismissed or blocked.
-      error_callback: (err) => reject(new Error(err?.message || err?.type || 'Sign-in was dismissed.')),
+      error_callback: (err) => reject(new Error(err?.message || err?.type || t('Sign-in was dismissed.'))),
     });
     // prompt:'' → silent when a prior grant + active Google session exist; 'consent' forces the chooser.
     client.requestAccessToken({ prompt });
@@ -247,7 +251,7 @@ async function driveFind(token: string, name: string): Promise<DriveFile | null>
   const r = await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${q}&fields=files(id,name,modifiedTime)`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!r.ok) throw new Error(`Drive list failed (${r.status}).`);
+  if (!r.ok) throw new Error(t('Drive list failed ({status}).', { status: r.status }));
   return ((await r.json()) as { files?: DriveFile[] }).files?.[0] || null;
 }
 
@@ -258,7 +262,7 @@ async function driveListAll(token: string): Promise<DriveFile[]> {
   do {
     const url = `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&pageSize=1000&fields=nextPageToken,files(id,name)${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''}`;
     const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-    if (!r.ok) throw new Error(`Drive list failed (${r.status}).`);
+    if (!r.ok) throw new Error(t('Drive list failed ({status}).', { status: r.status }));
     const j = (await r.json()) as { files?: DriveFile[]; nextPageToken?: string };
     out.push(...(j.files || []));
     pageToken = j.nextPageToken || '';
@@ -273,11 +277,11 @@ export const googleDriveProvider: SyncProvider = {
   available: (cfg) =>
     driveClientId(cfg)
       ? true
-      : { ok: false, reason: 'Google Drive sync isn’t enabled on this deployment — add your own OAuth client ID below.' },
+      : { ok: false, reason: t('Google Drive sync isn’t enabled on this deployment — add your own OAuth client ID below.') },
   // `silent` (auto-sync / boot) only reuses an existing grant — it never opens a popup.
   async connect(cfg, { silent = false } = {}) {
     const clientId = driveClientId(cfg);
-    if (!clientId) throw new Error('Google Drive sync isn’t available here.');
+    if (!clientId) throw new Error(t('Google Drive sync isn’t available here.'));
     if (driveTokenValid()) {
       if (!_driveProfile) await fetchDriveProfile(_driveToken!.value);
       return { token: _driveToken!.value } satisfies DriveConn;
@@ -320,11 +324,11 @@ export const googleDriveProvider: SyncProvider = {
         },
         body: JSON.stringify(meta),
       });
-      if (!init.ok) throw new Error(`Drive upload init failed (${init.status}).`);
+      if (!init.ok) throw new Error(t('Drive upload init failed ({status}).', { status: init.status }));
       const session = init.headers.get('Location');
-      if (!session) throw new Error('Drive upload init returned no session URL.');
+      if (!session) throw new Error(t('Drive upload init returned no session URL.'));
       const put = await fetch(session, { method: 'PUT', body: blob });
-      if (!put.ok) throw new Error(`Drive upload failed (${put.status}).`);
+      if (!put.ok) throw new Error(t('Drive upload failed ({status}).', { status: put.status }));
       return;
     }
     const form = new FormData();
@@ -334,7 +338,7 @@ export const googleDriveProvider: SyncProvider = {
       ? `https://www.googleapis.com/upload/drive/v3/files/${existing}?uploadType=multipart`
       : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
     const r = await fetch(url, { method: existing ? 'PATCH' : 'POST', headers: { Authorization: `Bearer ${c.token}` }, body: form });
-    if (!r.ok) throw new Error(`Drive upload failed (${r.status}).`);
+    if (!r.ok) throw new Error(t('Drive upload failed ({status}).', { status: r.status }));
   },
   async download(conn: never, name: string) {
     const c = conn as unknown as DriveConn;

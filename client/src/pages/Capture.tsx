@@ -9,6 +9,7 @@ import { Icon } from '../components/Icon';
 import { shortDate, todayISO } from '../lib/format';
 import { DropZone } from '../components/DropZone';
 import { captureDate } from '../lib/exif';
+import { t } from '../lib/i18n';
 
 interface QueueItem {
   name: string;
@@ -68,7 +69,7 @@ export function Capture() {
           { captured_at: shotOn, pose_type: pose || undefined, division: current.category, notes: notes || undefined },
           setProgress
         );
-        mark(i, { state: 'done', detail: `${shortDate(shotOn)}${cd.src === 'exif' ? ' · exif' : ''}` });
+        mark(i, { state: 'done', detail: cd.src === 'exif' ? t('{date} · EXIF', { date: shortDate(shotOn) }) : shortDate(shotOn) });
       } catch (err) {
         failed++;
         mark(i, { state: 'failed', detail: (err as Error).message });
@@ -80,8 +81,10 @@ export function Capture() {
     if (fileRef.current) fileRef.current.value = '';
     toast(
       failed
-        ? `${list.length - failed} uploaded, ${failed} failed`
-        : `Uploaded ${list.length}${fromExif ? ` · ${fromExif} dated from EXIF` : ''}`
+        ? t('{ok} uploaded, {failed} failed', { ok: list.length - failed, failed })
+        : fromExif
+          ? t('Uploaded {n} · {exif} dated from EXIF', { n: list.length, exif: fromExif })
+          : t('Uploaded {n}', { n: list.length })
     );
     await reload();
     await refreshAthletes();
@@ -93,11 +96,11 @@ export function Capture() {
   }
 
   async function del(m: MediaAsset) {
-    if (!confirm('Delete this item and its analyses?')) return;
+    if (!confirm(t('Delete this item and its analyses?'))) return;
     await api.media.remove(m.id);
     await reload();
     await refreshAthletes();
-    toast('Deleted');
+    toast(t('Deleted'));
   }
 
   if (!current) return <NeedAthlete />;
@@ -105,26 +108,26 @@ export function Capture() {
   return (
     <div>
       <PageHead
-        kicker="Capture"
-        title="Photos & video"
-        lede="Add current and historical shots. Tag each with the pose and the date it was actually taken so progress lines up honestly over time."
+        kicker={t('Capture')}
+        title={t('Photos & video')}
+        lede={t('Add current and historical shots. Tag each with the pose and the date it was actually taken so progress lines up honestly over time.')}
       />
 
       <DropZone
         onFiles={(dropped) => uploadMany(dropped)}
-        label={pose ? `Drop to add as ${poseLabel(pose)}` : 'Drop photos or video to upload'}
+        label={pose ? t('Drop to add as {pose}', { pose: poseLabel(pose) }) : t('Drop photos or video to upload')}
       >
       <div className="grid" style={{ gridTemplateColumns: '380px 1fr', gap: 24, alignItems: 'start' }}>
         <form className="card" onSubmit={doUpload}>
-          <p className="kicker" style={{ marginBottom: 16 }}>Upload</p>
+          <p className="kicker" style={{ marginBottom: 16 }}>{t('Upload')}</p>
           <p className="drop-hint">
-            Drag photos or video anywhere on this page — or
-            <button type="button" className="btn sm" style={{ margin: '0 0 0 8px' }} onClick={() => fileRef.current?.click()}>
-              browse…
+            {t('Drag photos or video anywhere on this page — or')}
+            <button type="button" className="btn sm" style={{ margin: 0, marginInlineStart: 8 }} onClick={() => fileRef.current?.click()}>
+              {t('browse…')}
             </button>
           </p>
           <label className="field">
-            <span className="lab">File (photo or video)</span>
+            <span className="lab">{t('File (photo or video)')}</span>
             <input
               ref={fileRef}
               type="file"
@@ -134,9 +137,9 @@ export function Capture() {
             />
           </label>
           <label className="field">
-            <span className="lab">Pose</span>
+            <span className="lab">{t('Pose')}</span>
             <select value={pose} onChange={(e) => setPose(e.target.value)}>
-              <option value="">— untagged —</option>
+              <option value="">{t('— untagged —')}</option>
               {poses.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.label}
@@ -145,7 +148,7 @@ export function Capture() {
             </select>
           </label>
           <label className="field">
-            <span className="lab">Date taken</span>
+            <span className="lab">{t('Date taken')}</span>
             <input
               type="date"
               value={date}
@@ -157,14 +160,14 @@ export function Capture() {
             {dateSrc !== 'manual' && (
               <span className="tiny muted">
                 {dateSrc === 'exif'
-                  ? 'Read from the photo’s EXIF — the day it was actually shot.'
-                  : 'No EXIF in this file; using its last-modified date. Correct it if you know better.'}
+                  ? t('Read from the photo’s EXIF — the day it was actually shot.')
+                  : t('No EXIF in this file; using its last-modified date. Correct it if you know better.')}
               </span>
             )}
           </label>
           <label className="field">
-            <span className="lab">Notes (optional)</span>
-            <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. 6 weeks out, morning, pumped" />
+            <span className="lab">{t('Notes (optional)')}</span>
+            <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t('e.g. 6 weeks out, morning, pumped')} />
           </label>
           {progress != null && (
             <div className="meter" style={{ margin: '4px 0 14px' }}>
@@ -173,11 +176,12 @@ export function Capture() {
           )}
           {queue.length > 0 && (
             <div style={{ margin: '4px 0 14px' }}>
+              {/* i18n-keys: waiting | uploading | done | failed */}
               {queue.map((q, i) => (
                 <div className="queue-row" key={`${q.name}-${i}`}>
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.name}</span>
                   <span style={{ color: q.state === 'failed' ? 'var(--bad)' : q.state === 'done' ? 'var(--good)' : 'inherit' }}>
-                    {q.detail ?? q.state}
+                    {q.detail ?? t(q.state)}
                   </span>
                 </div>
               ))}
@@ -185,10 +189,10 @@ export function Capture() {
           )}
           <button className="btn primary" disabled={!files.length || progress != null}>
             <Icon name="upload" size={14} />{' '}
-            {progress != null ? `Uploading ${progress}%` : files.length > 1 ? `Upload ${files.length} files` : 'Upload'}
+            {progress != null ? t('Uploading {p}%', { p: progress }) : files.length > 1 ? t('Upload {n} files', { n: files.length }) : t('Upload')}
           </button>
           <p className="tiny muted" style={{ marginTop: 12 }}>
-            Photos are processed on your machine for geometry analysis and never leave it unless you explicitly run AI coaching.
+            {t('Photos are processed on your machine for geometry analysis and never leave it unless you explicitly run AI coaching.')}
           </p>
         </form>
 
@@ -212,7 +216,7 @@ export function Capture() {
             if (!untagged.length) return null;
             return (
               <section style={{ marginBottom: 22 }}>
-                <p className="kicker" style={{ marginBottom: 10 }}>Untagged · {untagged.length}</p>
+                <p className="kicker" style={{ marginBottom: 10 }}>{t('Untagged · {n}', { n: untagged.length })}</p>
                 <div className="media-grid">
                   {untagged.map((m) => (
                     <MediaTile key={m.id} m={m} poses={poses} onDelete={() => del(m)} onGrab={() => setGrab(m)} onRetag={reload} />
@@ -222,9 +226,8 @@ export function Capture() {
             );
           })()}
           {media.length === 0 && (
-            <EmptyState title="Nothing captured yet">
-              Drag a photo or video onto this page — or use the form on the left. Photos keep the date they were
-              shot, read from their own EXIF.
+            <EmptyState title={t('Nothing captured yet')}>
+              {t('Drag a photo or video onto this page — or use the form. Photos keep the date they were shot, read from their own EXIF.')}
             </EmptyState>
           )}
         </div>
@@ -238,7 +241,7 @@ export function Capture() {
           onCaptured={async (blob) => {
             const f = new File([blob], `frame-${Date.now()}.jpg`, { type: 'image/jpeg' });
             await api.media.upload(current.id, f, { captured_at: grab.captured_at, pose_type: grab.pose_type ?? undefined, division: current.category, notes: 'Frame captured from video' });
-            toast('Frame saved as photo');
+            toast(t('Frame saved as photo'));
             setGrab(null);
             await reload();
           }}
@@ -270,21 +273,21 @@ function MediaTile({
           <Icon name="timelapse" size={30} />
         </div>
       )}
-      {m.kind === 'video' && <span className="badge">video</span>}
+      {m.kind === 'video' && <span className="badge">{t('video')}</span>}
       <span className="meta">{shortDate(m.captured_at)}</span>
-      <div style={{ position: 'absolute', top: 6, right: 6, display: 'flex', gap: 4 }}>
+      <div style={{ position: 'absolute', top: 6, insetInlineEnd: 6, display: 'flex', gap: 4 }}>
         {m.kind === 'video' && (
-          <button className="btn sm" style={{ padding: 4 }} title="Capture frame" onClick={onGrab}>
+          <button className="btn sm" style={{ padding: 4 }} title={t('Capture frame')} onClick={onGrab}>
             <Icon name="camera" size={13} />
           </button>
         )}
-        <button className="btn sm danger" style={{ padding: 4 }} title="Delete" onClick={onDelete}>
+        <button className="btn sm danger" style={{ padding: 4 }} title={t('Delete')} onClick={onDelete}>
           <Icon name="trash" size={13} />
         </button>
       </div>
       {poses && onRetag && (
         <select
-          style={{ position: 'absolute', bottom: 28, left: 6, right: 6, width: 'auto', fontSize: 11, padding: '3px 6px' }}
+          style={{ position: 'absolute', bottom: 28, insetInlineStart: 6, insetInlineEnd: 6, width: 'auto', fontSize: 11, padding: '3px 6px' }}
           defaultValue=""
           onChange={async (e) => {
             await api.media.update(m.id, { pose_type: e.target.value });
@@ -292,7 +295,7 @@ function MediaTile({
           }}
         >
           <option value="" disabled>
-            tag pose…
+            {t('tag pose…')}
           </option>
           {poses.map((p) => (
             <option key={p.id} value={p.id}>
@@ -320,13 +323,13 @@ function FrameGrabber({ media, onClose, onCaptured }: { media: MediaAsset; onClo
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', display: 'grid', placeItems: 'center', zIndex: 9000 }} onClick={onClose}>
       <div className="card solid" style={{ maxWidth: 720, width: '92%' }} onClick={(e) => e.stopPropagation()}>
         <div className="row spread" style={{ marginBottom: 12 }}>
-          <p className="kicker">Capture a frame — {poseLabel(media.pose_type)}</p>
-          <button className="btn sm" onClick={onClose}>Close</button>
+          <p className="kicker">{t('Capture a frame — {pose}', { pose: poseLabel(media.pose_type) })}</p>
+          <button className="btn sm" onClick={onClose}>{t('Close')}</button>
         </div>
         <video ref={videoRef} src={media.url} controls style={{ width: '100%', borderRadius: 4 }} />
-        <p className="tiny muted" style={{ margin: '12px 0' }}>Scrub to the moment you hit the pose, then capture it as an analyzable photo.</p>
+        <p className="tiny muted" style={{ margin: '12px 0' }}>{t('Scrub to the moment you hit the pose, then capture it as an analyzable photo.')}</p>
         <button className="btn primary" onClick={capture}>
-          <Icon name="camera" size={14} /> Capture current frame
+          <Icon name="camera" size={14} /> {t('Capture current frame')}
         </button>
       </div>
     </div>
@@ -336,8 +339,8 @@ function FrameGrabber({ media, onClose, onCaptured }: { media: MediaAsset; onClo
 function NeedAthlete() {
   return (
     <div>
-      <PageHead title="Capture" lede="Select an athlete first." />
-      <Link to="/athletes" className="btn primary">Go to athletes</Link>
+      <PageHead title={t('Capture')} lede={t('Select an athlete first.')} />
+      <Link to="/athletes" className="btn primary">{t('Go to athletes')}</Link>
     </div>
   );
 }

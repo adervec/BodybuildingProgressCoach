@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { renderPoseSVG, POSE_FIG_CSS } from '../lib/poseDiagram';
+import { t } from '../lib/i18n';
 
 let injected = false;
 function ensureCss() {
@@ -18,7 +19,7 @@ export function PoseDiagram({ poseId, maxWidth = 200 }: { poseId: string; maxWid
   if (!svg) {
     return (
       <div className="pose-fig" style={{ maxWidth, opacity: 0.5, fontSize: 12, fontFamily: 'var(--mono)' }}>
-        no diagram
+        {t('no diagram')}
       </div>
     );
   }

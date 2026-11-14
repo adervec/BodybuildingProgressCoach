@@ -6,6 +6,7 @@
  */
 import { closeDb, DB_NAME } from './store';
 import { SYNC_PROVIDERS, SYNC_IDB_NAME } from '../sync/syncProviders';
+import { t } from '../i18n';
 
 export const APP_KEYS = ['bpc.disclaimerAck.v1', 'bpc.currentAthleteId', 'ls.sync', 'ls.orientation', 'bpc-coach-reply',
   'bpc-pose-reviews', 'bpc-pose-review-due', 'cowork-state:bodybuildingprogresscoach'];
@@ -17,8 +18,8 @@ function deleteDb(name: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const r = indexedDB.deleteDatabase(name);
     r.onsuccess = () => resolve();
-    r.onerror = () => reject(r.error ?? new Error(`Could not delete ${name}`));
-    r.onblocked = () => reject(new Error('Close this app in other tabs, then try again.'));
+    r.onerror = () => reject(r.error ?? new Error(t('Could not delete {name}', { name })));
+    r.onblocked = () => reject(new Error(t('Close this app in other tabs, then try again.')));
   });
 }
 

@@ -8,6 +8,7 @@ import { PageHead, EmptyState } from '../components/Layout';
 import { LandmarkCanvas } from '../components/LandmarkCanvas';
 import { Delta } from '../components/Score';
 import { formatDate, daysBetween, scoreColor } from '../lib/format';
+import { t, fmt } from '../lib/i18n';
 
 export function Compare() {
   const { current } = useApp();
@@ -50,14 +51,17 @@ export function Compare() {
   if (!current)
     return (
       <div>
-        <PageHead title="Compare" lede="Select an athlete first." />
-        <Link to="/athletes" className="btn primary">Go to athletes</Link>
+        <PageHead title={t('Compare')} lede={t('Select an athlete first.')} />
+        <Link to="/athletes" className="btn primary">{t('Go to athletes')}</Link>
       </div>
     );
 
+  // The link sits inside one whole sentence; split the translation at its {link} placeholder.
+  const need = t('Add two or more {pose} photos in {link} (taken on different dates) to compare them.', { pose: pose?.label ?? '' }).split('{link}');
+
   return (
     <div>
-      <PageHead kicker="Compare" title="Side by side" lede="Hold two dates of the same pose against each other — the numbers move with the picture." />
+      <PageHead kicker={t('Compare')} title={t('Side by side')} lede={t('Hold two dates of the same pose against each other — the numbers move with the picture.')} />
 
       <div className="row wrap" style={{ gap: 8, marginBottom: 20 }}>
         {poses.map((p) => (
@@ -68,25 +72,25 @@ export function Compare() {
       </div>
 
       {media.length < 2 ? (
-        <EmptyState title="Need at least two photos">
-          Add two or more {pose?.label} photos in <Link to="/capture">Capture</Link> (taken on different dates) to compare them.
+        <EmptyState title={t('Need at least two photos')}>
+          {need[0]}<Link to="/capture">{t('Capture')}</Link>{need[1]}
         </EmptyState>
       ) : (
         <div className="grid" style={{ gridTemplateColumns: '1fr 120px 1fr', gap: 20, alignItems: 'start' }}>
-          <Side label="Before" media={media} selId={aId} onSelect={setAId} full={aFull} g={gA} />
+          <Side label={t('Before')} media={media} selId={aId} onSelect={setAId} full={aFull} g={gA} />
 
           {/* delta column */}
           <div className="card" style={{ textAlign: 'center' }}>
-            <p className="kicker" style={{ marginBottom: 10 }}>Change</p>
-            {span != null && <p className="tiny muted" style={{ marginBottom: 12 }}>{Math.abs(span)} days</p>}
-            <DeltaRow label="Form" a={gA?.form_score} b={gB?.form_score} />
-            <DeltaRow label="Symmetry" a={gA?.symmetry_score} b={gB?.symmetry_score} />
-            <DeltaRow label="Ref-form" a={gA?.ref_match_score} b={gB?.ref_match_score} />
-            <DeltaRow label="Sh:waist" a={gA?.metrics?.vTaper} b={gB?.metrics?.vTaper} digits={2} />
-            {(!gA || !gB) && <p className="tiny muted" style={{ marginTop: 10 }}>Analyze both photos in Pose Studio for full deltas.</p>}
+            <p className="kicker" style={{ marginBottom: 10 }}>{t('Change')}</p>
+            {span != null && <p className="tiny muted" style={{ marginBottom: 12 }}>{t.n('{n} day', '{n} days', Math.abs(span))}</p>}
+            <DeltaRow label={t('Form')} a={gA?.form_score} b={gB?.form_score} />
+            <DeltaRow label={t('Symmetry')} a={gA?.symmetry_score} b={gB?.symmetry_score} />
+            <DeltaRow label={t('Ref-form')} a={gA?.ref_match_score} b={gB?.ref_match_score} />
+            <DeltaRow label={t('Sh:waist')} a={gA?.metrics?.vTaper} b={gB?.metrics?.vTaper} digits={2} />
+            {(!gA || !gB) && <p className="tiny muted" style={{ marginTop: 10 }}>{t('Analyze both photos in Pose Studio for full deltas.')}</p>}
           </div>
 
-          <Side label="After" media={media} selId={bId} onSelect={setBId} full={bFull} g={gB} />
+          <Side label={t('After')} media={media} selId={bId} onSelect={setBId} full={bFull} g={gB} />
         </div>
       )}
     </div>
@@ -122,9 +126,9 @@ function Side({
       </div>
       {full && <LandmarkCanvas imageUrl={full.url} landmarks={g?.landmarks ?? null} height={420} />}
       <div className="row" style={{ gap: 18, marginTop: 12, fontFamily: 'var(--mono)' }}>
-        <Stat label="Form" value={g?.form_score} />
-        <Stat label="Sym" value={g?.symmetry_score} />
-        <Stat label="Sh:waist" value={g?.metrics?.vTaper} digits={2} />
+        <Stat label={t('Form')} value={g?.form_score} />
+        <Stat label={t('Sym')} value={g?.symmetry_score} />
+        <Stat label={t('Sh:waist')} value={g?.metrics?.vTaper} digits={2} />
       </div>
     </div>
   );
@@ -134,7 +138,7 @@ function Stat({ label, value, digits = 0 }: { label: string; value: number | nul
   return (
     <div>
       <div style={{ fontFamily: 'var(--display)', fontSize: 22, color: digits === 0 ? scoreColor(value ?? null) : 'var(--text)' }}>
-        {value == null ? '—' : value.toFixed(digits)}
+        {value == null ? '—' : fmt.fixed(value, digits)}
       </div>
       <div className="tiny" style={{ color: 'var(--text-mute)' }}>{label}</div>
     </div>

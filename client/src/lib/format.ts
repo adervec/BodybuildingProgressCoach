@@ -9,21 +9,23 @@ export const kgToLb = (kg: number): number => kg * 2.2046226218;
 export const lbToKg = (lb: number): number => lb / 2.2046226218;
 export const cmToIn = (cm: number): number => cm / 2.54;
 
+// Dates read a stored local day as local midnight, then format in the shared language (appFont.fmt).
 export function formatDate(iso: string | undefined | null): string {
   if (!iso) return '—';
   const d = new Date(iso.length <= 10 ? `${iso}T00:00:00` : iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  return fmt.date(d, 'medium');
 }
 
 export function shortDate(iso: string | undefined | null): string {
   if (!iso) return '—';
   const d = new Date(iso.length <= 10 ? `${iso}T00:00:00` : iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return fmt.custom(d, { month: 'short', day: 'numeric' });
 }
 
 import { localDay } from '../../../server/src/lib/localDay';
+import { t, fmt } from './i18n';
 export { localDay };
 
 /** Today as the user's local Y-M-D. */
@@ -47,14 +49,16 @@ export function scoreColor(score: number | null | undefined): string {
 }
 
 export function scoreWord(score: number | null | undefined): string {
-  if (score == null) return 'n/a';
-  if (score >= 85) return 'Excellent';
-  if (score >= 70) return 'Strong';
-  if (score >= 55) return 'Developing';
-  if (score >= 40) return 'Needs work';
-  return 'Early';
+  if (score == null) return t('n/a');
+  if (score >= 85) return t('Excellent');
+  if (score >= 70) return t('Strong');
+  if (score >= 55) return t('Developing');
+  if (score >= 40) return t('Needs work');
+  return t('Early');
 }
 
+// Labels are English keys; translate where shown: t(f.label).
+// i18n-keys: Chest | Waist | Hips | Arm (L) | Arm (R) | Thigh (L) | Thigh (R) | Calf
 export const MEASUREMENT_FIELDS: { key: string; label: string }[] = [
   { key: 'chest', label: 'Chest' },
   { key: 'waist', label: 'Waist' },

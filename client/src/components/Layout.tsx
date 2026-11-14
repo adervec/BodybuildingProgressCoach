@@ -6,7 +6,10 @@ import { Icon } from './Icon';
 import { DisclaimerNotice, openDisclaimer } from './DisclaimerNotice';
 import { thumbSrc } from '../api';
 import { savedOrientation, saveOrientation, applyOrientation, type OrientationMode } from '../lib/orientation';
+import { t } from '../lib/i18n';
 
+// Nav labels stay English here (module load); translate where shown: t(n.label).
+// i18n-keys: Dashboard | Capture | Pose Studio | Mirror | Physique | Compare | Timelapse | Guides | Athletes | Backup
 const NAV = [
   { to: '/', label: 'Dashboard', icon: 'dashboard', end: true },
   { to: '/capture', label: 'Capture', icon: 'capture' },
@@ -51,7 +54,7 @@ export function Layout() {
     setOrient(mode);
     saveOrientation(mode);
     const ok = await applyOrientation(mode);
-    if (!ok && mode !== 'auto') toast('Saved — this browser can’t lock rotation. It applies in the installed app (Android).');
+    if (!ok && mode !== 'auto') toast(t('Saved — this browser can’t lock rotation. It applies in the installed app (Android).'));
   }
 
   return (
@@ -61,7 +64,7 @@ export function Layout() {
         <button
           type="button"
           className="nav-toggle"
-          aria-label={navOpen ? 'Close menu' : 'Open menu'}
+          aria-label={navOpen ? t('Close menu') : t('Open menu')}
           aria-expanded={navOpen}
           onClick={() => setNavOpen((o) => !o)}
         >
@@ -69,7 +72,7 @@ export function Layout() {
         </button>
         <div className="brand">
           Living Sculpture
-          <div className="sub">Progress Coach</div>
+          <div className="sub">{t('Progress Coach')}</div>
         </div>
 
         <div className="athlete-switch">
@@ -79,9 +82,9 @@ export function Layout() {
             </div>
             <div style={{ minWidth: 0 }}>
               <div className="name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {current?.name ?? 'No athlete'}
+                {current?.name ?? t('No athlete')}
               </div>
-              <div className="cat">{current ? categoryLabel(current.category) : 'select a profile'}</div>
+              <div className="cat">{current ? categoryLabel(current.category) : t('select a profile')}</div>
             </div>
           </div>
           {athletes.length > 0 && (
@@ -111,12 +114,12 @@ export function Layout() {
                 <NavLink
                   to={n.to}
                   end={n.end}
-                  title={n.label}
+                  title={t(n.label)}
                   className={({ isActive }) => (isActive ? 'active' : '')}
                   onClick={() => setNavOpen(false)}
                 >
                   <Icon name={n.icon} className="ic" />
-                  <span className="nav-label">{n.label}</span>
+                  <span className="nav-label">{t(n.label)}</span>
                 </NavLink>
               </li>
             ))}
@@ -125,20 +128,20 @@ export function Layout() {
 
         <div className="side-extras" style={{ marginTop: 'auto' }}>
           <label className="field" style={{ marginBottom: 12 }}>
-            <span className="lab">Orientation</span>
+            <span className="lab">{t('Orientation')}</span>
             <select value={orient} onChange={(e) => changeOrient(e.target.value as OrientationMode)}>
-              <option value="portrait">Portrait</option>
-              <option value="landscape">Landscape</option>
-              <option value="auto">Auto-rotate</option>
+              <option value="portrait">{t('Portrait')}</option>
+              <option value="landscape">{t('Landscape')}</option>
+              <option value="auto">{t('Auto-rotate')}</option>
             </select>
           </label>
           <div className="pill" style={{ borderColor: aiEnabled ? 'var(--accent)' : 'var(--line)' }}>
-            <Icon name="ai" size={11} /> AI {aiEnabled ? 'on' : 'off'}
+            <Icon name="ai" size={11} /> {aiEnabled ? t('AI on') : t('AI off')}
           </div>
           {aiEnabled && <div className="tiny muted" style={{ marginTop: 6, fontFamily: 'var(--mono)' }}>{aiModel}</div>}
           <div className="legal-links">
             <button type="button" onClick={openDisclaimer}>
-              Disclaimer &amp; privacy
+              {t('Disclaimer & privacy')}
             </button>
           </div>
         </div>

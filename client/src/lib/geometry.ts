@@ -140,6 +140,10 @@ export function analyzePose(
     0
   );
 
+  // Notes and limb names are stored with the analysis, so they stay English here and are
+  // translated where shown: t(note), t(limb.name).
+  // i18n-keys: Reference-form match compares your joint angles to the guide’s stylized ideal — read it as directional, not absolute. | Side / asymmetric pose: a geometric form score isn’t computed (it would be unfair). Use AI coaching or manual review — the proportion & symmetry numbers above still apply. | Low landmark confidence — improve lighting and framing, and keep the whole body in frame for a reliable read.
+  // i18n-keys: Upper arm (L) | Forearm (L) | Upper arm (R) | Forearm (R) | Thigh (L) | Thigh (R)
   const notes: string[] = [];
 
   // Reference-form match vs the guide's ideal angles (where a spec exists).

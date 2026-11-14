@@ -1,6 +1,6 @@
 // Service worker: app shell + vendored assets offline; data always live.
 // ponytail: hand-rolled instead of workbox — 40 lines beats a build plugin.
-const CACHE = 'ls-v3'; // v3: base-relative shell (GitHub Pages serves the app from a subpath)
+const CACHE = 'ls-v4'; // v4: JSON (translations, what's new) network-first; v3: base-relative shell
 
 // The app shell's URL, derived from where this worker itself is served: '/' when self-hosted at the
 // origin root, '/<repo>/' on GitHub Pages. Absolute '/' would fetch the wrong document there.
@@ -24,6 +24,20 @@ self.addEventListener('fetch', (e) => {
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
   // Live data only — never serve a stale athlete, analysis or upload response.
   if (url.pathname.startsWith('/api/')) return;
+
+  // Unhashed JSON that changes with each release (locales/<lang>.json, whatsnew.json): network
+  // first so an update reaches the reader, the cached copy only when offline.
+  if (url.pathname.endsWith('.json')) {
+    e.respondWith(
+      fetch(request)
+        .then((res) => {
+          if (res.ok && res.type === 'basic') { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(request, copy)); }
+          return res;
+        })
+        .catch(() => caches.match(request).then((r) => r || Response.error()))
+    );
+    return;
+  }
 
   // Navigations: network first, fall back to the cached shell when offline.
   if (request.mode === 'navigate') {

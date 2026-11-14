@@ -6,6 +6,7 @@ import { CATEGORIES, categoryLabel, themeFor } from '../lib/poses';
 import type { Category } from '../lib/types';
 import { PageHead } from '../components/Layout';
 import { Icon } from '../components/Icon';
+import { t } from '../lib/i18n';
 
 export function Athletes() {
   const { athletes, refreshAthletes, selectAthlete, current, toast } = useApp();
@@ -25,7 +26,7 @@ export function Athletes() {
       selectAthlete(a.id);
       setName('');
       setHeight('');
-      toast(`Created ${a.name}`);
+      toast(t('Created {name}', { name: a.name }));
       navigate('/');
     } catch (err) {
       toast((err as Error).message);
@@ -35,19 +36,19 @@ export function Athletes() {
   }
 
   async function remove(id: number, n: string) {
-    if (!confirm(`Delete ${n} and all their photos, analyses and measurements? This cannot be undone.`)) return;
+    if (!confirm(t('Delete {name} and all their photos, analyses and measurements? This cannot be undone.', { name: n }))) return;
     await api.athletes.remove(id);
     const list = await refreshAthletes();
     if (current?.id === id) selectAthlete(list[0]?.id ?? null);
-    toast(`Deleted ${n}`);
+    toast(t('Deleted {name}', { name: n }));
   }
 
   return (
     <div>
       <PageHead
-        kicker="Profiles"
-        title="Athletes"
-        lede="Each athlete has their own gallery, analyses and measurements. The interface reskins to the division — bronze-on-ink for the men's stage, gold-on-marble for the women's."
+        kicker={t('Profiles')}
+        title={t('Athletes')}
+        lede={t("Each athlete has their own gallery, analyses and measurements. The interface reskins to the division — bronze-on-ink for the men's stage, gold-on-marble for the women's.")}
       />
 
       <div className="cards-grid" style={{ marginBottom: 34 }}>
@@ -63,8 +64,8 @@ export function Athletes() {
               </div>
             </div>
             <div className="row tiny muted" style={{ marginTop: 14, gap: 18, fontFamily: 'var(--mono)' }}>
-              <span>{a.media_count ?? 0} media</span>
-              <span>{a.comp_count ?? 0} check-ins</span>
+              <span>{t.n('{n} media', '{n} media', a.media_count ?? 0)}</span>
+              <span>{t.n('{n} check-in', '{n} check-ins', a.comp_count ?? 0)}</span>
             </div>
             <div className="row" style={{ marginTop: 16, gap: 8 }}>
               <button
@@ -74,26 +75,26 @@ export function Athletes() {
                   navigate('/');
                 }}
               >
-                Open
+                {t('Open')}
               </button>
-              <button className="btn sm danger" onClick={() => remove(a.id, a.name)} aria-label="Delete">
+              <button className="btn sm danger" onClick={() => remove(a.id, a.name)} aria-label={t('Delete')}>
                 <Icon name="trash" size={14} />
               </button>
             </div>
           </div>
         ))}
-        {athletes.length === 0 && <p className="muted">No athletes yet — create your first profile below.</p>}
+        {athletes.length === 0 && <p className="muted">{t('No athletes yet — create your first profile below.')}</p>}
       </div>
 
       <div className="card" style={{ maxWidth: 540 }}>
-        <p className="kicker" style={{ marginBottom: 16 }}>New athlete</p>
+        <p className="kicker" style={{ marginBottom: 16 }}>{t('New athlete')}</p>
         <form onSubmit={create}>
           <label className="field">
-            <span className="lab">Name</span>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Alex Rivera" />
+            <span className="lab">{t('Name')}</span>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('e.g. Alex Rivera')} />
           </label>
           <label className="field">
-            <span className="lab">Division / Category</span>
+            <span className="lab">{t('Division / Category')}</span>
             <select value={category} onChange={(e) => setCategory(e.target.value as Category)}>
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>
@@ -103,11 +104,11 @@ export function Athletes() {
             </select>
           </label>
           <label className="field">
-            <span className="lab">Height (cm, optional)</span>
+            <span className="lab">{t('Height (cm, optional)')}</span>
             <input value={height} onChange={(e) => setHeight(e.target.value)} type="number" placeholder="178" />
           </label>
           <button className="btn primary" disabled={busy || !name.trim()}>
-            <Icon name="plus" size={14} /> {busy ? 'Creating…' : 'Create athlete'}
+            <Icon name="plus" size={14} /> {busy ? t('Creating…') : t('Create athlete')}
           </button>
         </form>
       </div>

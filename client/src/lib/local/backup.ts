@@ -7,6 +7,7 @@
 import { tx, get, getAll, put, byIndex, now } from './store';
 import { safeMediaName } from '../../../../server/src/lib/safeName';
 import { localDay } from '../../../../server/src/lib/localDay';
+import { t } from '../i18n';
 
 export const BACKUP_APP = 'living-sculpture-backup';
 export const BACKUP_VERSION = 1;
@@ -68,9 +69,9 @@ export interface ImportCounts { athletes: number; media: number; analyses: numbe
 /** Insert-if-absent on the same natural keys the server uses, so imports are idempotent. */
 export async function importBundle(bundle: unknown): Promise<ImportCounts> {
   const b = bundle as { app?: string; version?: number; athletes?: Record<string, unknown>[] };
-  if (!b || b.app !== BACKUP_APP) throw new Error('Not a Living Sculpture backup file.');
-  if (Number(b.version) > BACKUP_VERSION) throw new Error(`That backup was written by a newer version (v${b.version}). Update this app first.`);
-  if (!Array.isArray(b.athletes)) throw new Error('Backup has no athletes array.');
+  if (!b || b.app !== BACKUP_APP) throw new Error(t('Not a Living Sculpture backup file.'));
+  if (Number(b.version) > BACKUP_VERSION) throw new Error(t('That backup was written by a newer version (v{version}). Update this app first.', { version: String(b.version) }));
+  if (!Array.isArray(b.athletes)) throw new Error(t('Backup has no athletes array.'));
 
   const added: ImportCounts = { athletes: 0, media: 0, analyses: 0, bodycomp: 0 };
 
@@ -187,7 +188,7 @@ export async function getMediaBlob(name: string): Promise<Blob | null> {
 /** Store restored bytes. Immutable: an existing blob is never rewritten. */
 export async function putMediaFile(name: string, blob: Blob): Promise<boolean> {
   const safe = safeMediaName(name);
-  if (!safe) throw new Error('bad media file name');
+  if (!safe) throw new Error(t('bad media file name'));
   return tx('blobs', 'readwrite', async (t) => {
     if (await get<Blob>(t, 'blobs', safe)) return false;
     await put(t, 'blobs', blob, safe);

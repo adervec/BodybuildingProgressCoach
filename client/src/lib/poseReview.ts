@@ -10,6 +10,8 @@
  */
 import type { Athlete, PoseAnalysis } from './types';
 import { poseLabel } from './poses';
+import { t } from './i18n';
+import { formatDate } from './format';
 
 export const POSE_REVIEWS_KEY = 'bpc-pose-reviews';
 export const POSE_REVIEW_CHANNEL = 'pose-review';
@@ -140,13 +142,13 @@ function parseReply(reply: unknown, known: Set<string>): Record<string, Omit<Pos
 export function poseReviewChannel(sessions: () => PoseAnalysis[] | Promise<PoseAnalysis[]>) {
   const byId = async () => new Map((await sessions()).filter((a) => a.file_name).map((a) => [a.file_name!, a]));
   return {
-    label: 'Pose review (AI grade)',
+    label: t('Pose review (AI grade)'),
     schedule: 'daily',
     preview: async (reply: unknown) => {
       const m = await byId();
       return Object.entries(parseReply(reply, new Set(m.keys()))).map(([id, r]) => {
         const a = m.get(id)!;
-        return { id, label: `${poseLabel(a.pose_type ?? a.media_pose ?? '')}, ${a.captured_at ?? ''}: grade ${r.grade} (app form ${a.form_score ?? '—'})`, detail: r.summary.slice(0, 400) };
+        return { id, label: t('{pose}, {date}: grade {grade} (app form {form})', { pose: poseLabel(a.pose_type ?? a.media_pose ?? ''), date: a.captured_at ? formatDate(a.captured_at) : '', grade: r.grade, form: a.form_score ?? '—' }), detail: r.summary.slice(0, 400) };
       });
     },
     apply: async (reply: unknown, acceptedIds?: string[]) => {
@@ -160,7 +162,7 @@ export function poseReviewChannel(sessions: () => PoseAnalysis[] | Promise<PoseA
         all[id] = { ...parsed[id], reviewedAt };
       }
       writeReviews(all);
-      return { summary: `${ids.length} pose review${ids.length === 1 ? '' : 's'} added beside the app's scores`, undo: { prev } };
+      return { summary: t.n("{n} pose review added beside the app's scores", "{n} pose reviews added beside the app's scores", ids.length), undo: { prev } };
     },
     undo: (d: { prev?: Record<string, PoseReview | null> }) => {
       const all = readReviews();

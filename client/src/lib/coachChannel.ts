@@ -1,5 +1,7 @@
 // cowork v2 (house standard) description of the "coach" channel: the shared panel shows `preview`
 // for review (on by default), calls `apply` once accepted, and can `undo` from its run history.
+import { t } from './i18n';
+
 export const COACH_REPLY_KEY = 'bpc-coach-reply';
 
 export function replyText(reply: unknown): string {
@@ -17,14 +19,14 @@ function write(text: string, show: (t: string) => void) {
 
 export function coachChannel(show: (text: string) => void) {
   return {
-    label: 'Physique coach',
+    label: t('Physique coach'),
     preview: (reply: unknown) => [
-      { id: 'reply', label: 'Show this advice (replaces the current one)', detail: replyText(reply).slice(0, 400) },
+      { id: 'reply', label: t('Show this advice (replaces the current one)'), detail: replyText(reply).slice(0, 400) },
     ],
     apply: (reply: unknown) => {
       const prev = read();
       write(replyText(reply), show);
-      return { summary: 'new coaching advice shown', undo: { prev } };
+      return { summary: t('new coaching advice shown'), undo: { prev } };
     },
     undo: (d: { prev?: string }) => write(d?.prev || '', show),
   };

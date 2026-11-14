@@ -12,6 +12,7 @@ import { ScoreBar, BigScore } from '../components/Score';
 import { Icon } from '../components/Icon';
 import { todayISO } from '../lib/format';
 import { requestPoseReview } from '../lib/poseReview';
+import { t, fmt } from '../lib/i18n';
 
 /** Judge's call-out, spoken. Native speech synthesis — silently absent where unsupported. */
 function speak(text: string) {
@@ -83,7 +84,7 @@ export function Mirror() {
       setOn(true);
       rafRef.current = requestAnimationFrame(tick);
     } catch (err) {
-      toast(`Camera unavailable: ${(err as Error).message}`);
+      toast(t('Camera unavailable: {error}', { error: (err as Error).message }));
     }
   }
 
@@ -218,7 +219,7 @@ export function Mirror() {
       c.height = v.videoHeight;
       c.getContext('2d')!.drawImage(v, 0, 0);
       const blob = await new Promise<Blob | null>((r) => c.toBlob(r, 'image/jpeg', 0.92));
-      if (!blob) throw new Error('Could not read the camera frame');
+      if (!blob) throw new Error(t('Could not read the camera frame'));
       const f = new File([blob], `mirror-${Date.now()}.jpg`, { type: 'image/jpeg' });
       const m = await api.media.upload(current.id, f, {
         captured_at: todayISO(),
@@ -240,7 +241,7 @@ export function Mirror() {
         });
         requestPoseReview();
       }
-      toast(`Saved ${pose.label}${live?.form != null ? ` · form ${live.form}` : ''}`);
+      toast(live?.form != null ? t('Saved {pose} · form {form}', { pose: pose.label, form: live.form }) : t('Saved {pose}', { pose: pose.label }));
       await refreshAthletes();
     } catch (err) {
       toast((err as Error).message);
@@ -254,23 +255,23 @@ export function Mirror() {
   if (!current)
     return (
       <div>
-        <PageHead title="Mirror" lede="Select an athlete first." />
-        <Link to="/athletes" className="btn primary">Go to athletes</Link>
+        <PageHead title={t('Mirror')} lede={t('Select an athlete first.')} />
+        <Link to="/athletes" className="btn primary">{t('Go to athletes')}</Link>
       </div>
     );
 
   return (
     <div>
       <PageHead
-        kicker="Mirror"
-        title="Live posing practice"
-        lede="Your camera becomes a scoring mirror: hit the pose, watch symmetry and reference-form track in real time, and save the best frame straight into your library. Routine mode calls each pose aloud and can save a frame at the end of every hold — prop the phone up and run your whole round hands-free. Everything runs on this device; the video never leaves it."
+        kicker={t('Mirror')}
+        title={t('Live posing practice')}
+        lede={t('Your camera becomes a scoring mirror: hit the pose, watch symmetry and reference-form track in real time, and save the best frame straight into your library. Routine mode calls each pose aloud and can save a frame at the end of every hold — prop the phone up and run your whole round hands-free. Everything runs on this device; the video never leaves it.')}
       />
 
       <div className="grid" style={{ gridTemplateColumns: '300px 1fr', gap: 24, alignItems: 'start' }}>
         <div className="stack" style={{ gap: 16 }}>
           <div className="card">
-            <p className="kicker" style={{ marginBottom: 10 }}>Pose</p>
+            <p className="kicker" style={{ marginBottom: 10 }}>{t('Pose')}</p>
             <select value={poseIdx % Math.max(poses.length, 1)} onChange={(e) => setPoseIdx(Number(e.target.value))} style={{ width: '100%' }}>
               {poses.map((p, i) => (
                 <option key={p.id} value={i}>{p.label}</option>
@@ -280,8 +281,8 @@ export function Mirror() {
             {pose && (
               <ul className="stack" style={{ gap: 6, listStyle: 'none', marginTop: 10 }}>
                 {pose.cues.map((c, i) => (
-                  <li key={i} className="tiny muted" style={{ paddingLeft: 14, position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: 0, top: 7, width: 7, height: 1, background: 'var(--accent)' }} />
+                  <li key={i} className="tiny muted" style={{ paddingInlineStart: 14, position: 'relative' }}>
+                    <span style={{ position: 'absolute', insetInlineStart: 0, top: 7, width: 7, height: 1, background: 'var(--accent)' }} />
                     {c}
                   </li>
                 ))}
@@ -290,38 +291,38 @@ export function Mirror() {
           </div>
 
           <div className="card">
-            <p className="kicker" style={{ marginBottom: 10 }}>Routine</p>
+            <p className="kicker" style={{ marginBottom: 10 }}>{t('Routine')}</p>
             <label className="row" style={{ gap: 8, marginBottom: 10, cursor: 'pointer' }}>
               <input type="checkbox" checked={routine} style={{ width: 'auto' }} onChange={(e) => setRoutine(e.target.checked)} />
-              <span className="tiny">Auto-advance through all {poses.length} poses — judge's call-outs</span>
+              <span className="tiny">{t("Auto-advance through all {n} poses — judge's call-outs", { n: poses.length })}</span>
             </label>
             <label className="row" style={{ gap: 8, marginBottom: 10, cursor: 'pointer' }}>
               <input type="checkbox" checked={callouts} style={{ width: 'auto' }} onChange={(e) => setCallouts(e.target.checked)} />
-              <span className="tiny">Call each pose aloud</span>
+              <span className="tiny">{t('Call each pose aloud')}</span>
             </label>
             <label className="row" style={{ gap: 8, marginBottom: 10, cursor: 'pointer' }}>
               <input type="checkbox" checked={autoSnap} style={{ width: 'auto' }} onChange={(e) => setAutoSnap(e.target.checked)} />
-              <span className="tiny">Auto-save a frame at the end of every hold</span>
+              <span className="tiny">{t('Auto-save a frame at the end of every hold')}</span>
             </label>
             <label className="field" style={{ marginBottom: 0 }}>
-              <span className="lab">Hold each pose (seconds)</span>
+              <span className="lab">{t('Hold each pose (seconds)')}</span>
               <input type="number" min={3} max={60} value={holdSecs} onChange={(e) => setHoldSecs(Math.max(3, Math.min(60, Number(e.target.value) || 10)))} />
             </label>
           </div>
 
           <div className="card">
-            <p className="kicker" style={{ marginBottom: 10 }}>Live score</p>
+            <p className="kicker" style={{ marginBottom: 10 }}>{t('Live score')}</p>
             {live ? (
               <>
-                <BigScore value={live.form} caption={live.form == null ? 'Pose not geometrically scored — watch symmetry' : 'Form (live)'} />
+                <BigScore value={live.form} caption={live.form == null ? t('Pose not geometrically scored — watch symmetry') : t('Form (live)')} />
                 <div style={{ marginTop: 14 }}>
-                  <ScoreBar label="Symmetry" value={live.symmetry} />
-                  <ScoreBar label="Reference-form" value={live.ref} />
+                  <ScoreBar label={t('Symmetry')} value={live.symmetry} />
+                  <ScoreBar label={t('Reference-form')} value={live.ref} />
                 </div>
-                <p className="tiny muted" style={{ marginTop: 10 }}>Landmark confidence {Math.round(live.confidence * 100)}%</p>
+                <p className="tiny muted" style={{ marginTop: 10 }}>{t('Landmark confidence {p}', { p: fmt.percent(live.confidence) })}</p>
               </>
             ) : (
-              <p className="tiny muted">{on ? 'Step back until your whole body is in frame.' : 'Start the mirror to see live scores.'}</p>
+              <p className="tiny muted">{on ? t('Step back until your whole body is in frame.') : t('Start the mirror to see live scores.')}</p>
             )}
           </div>
         </div>
@@ -332,7 +333,7 @@ export function Mirror() {
             <video ref={videoRef} playsInline muted style={{ width: '100%', display: 'block', transform: 'scaleX(-1)', minHeight: 240 }} />
             <canvas ref={overlayRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', transform: 'scaleX(-1)' }} />
             {on && pose && (
-              <div style={{ position: 'absolute', top: 10, left: 12, right: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', pointerEvents: 'none' }}>
+              <div style={{ position: 'absolute', top: 10, insetInlineStart: 12, insetInlineEnd: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', pointerEvents: 'none' }}>
                 <span className="pill" style={{ background: 'rgba(0,0,0,.55)', color: '#f3ecdd' }}>{pose.label}</span>
                 {(snapIn ?? countdown) != null && (
                   <span
@@ -347,7 +348,7 @@ export function Mirror() {
             {!on && (
               <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
                 <button className="btn primary" onClick={start}>
-                  <Icon name="camera" size={15} /> Start the mirror
+                  <Icon name="camera" size={15} /> {t('Start the mirror')}
                 </button>
               </div>
             )}
@@ -356,16 +357,16 @@ export function Mirror() {
             {on && (
               <>
                 <button className="btn primary" onClick={() => setSnapIn(3)} disabled={saving || snapIn != null || !pose}>
-                  <Icon name="capture" size={14} /> {saving ? 'Saving…' : snapIn != null ? `Saving in ${snapIn}…` : 'Save in 3 s'}
+                  <Icon name="capture" size={14} /> {saving ? t('Saving…') : snapIn != null ? t('Saving in {n}…', { n: snapIn }) : t('Save in 3 s')}
                 </button>
-                <button className="btn" onClick={snap} disabled={saving || snapIn != null || !pose} title="Save the current frame immediately">
-                  Save now
+                <button className="btn" onClick={snap} disabled={saving || snapIn != null || !pose} title={t('Save the current frame immediately')}>
+                  {t('Save now')}
                 </button>
-                <button className="btn" onClick={stop}>Stop</button>
+                <button className="btn" onClick={stop}>{t('Stop')}</button>
               </>
             )}
-            <span className="tiny muted" style={{ marginLeft: 'auto', alignSelf: 'center' }}>
-              First start downloads the pose model (~5 MB), then it's all local.
+            <span className="tiny muted" style={{ marginInlineStart: 'auto', alignSelf: 'center' }}>
+              {t("First start downloads the pose model (~5 MB), then it's all local.")}
             </span>
           </div>
         </div>
