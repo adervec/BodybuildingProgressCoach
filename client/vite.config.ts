@@ -12,7 +12,16 @@ const STATIC = process.env.VITE_STATIC === '1';
 export default defineConfig({
   base: STATIC ? './' : '/',
   define: { 'import.meta.env.VITE_STATIC': JSON.stringify(STATIC ? '1' : '') },
-  plugins: [react()],
+  plugins: [
+    react(),
+    // The CSP in index.html forbids inline scripts, but the dev server's React refresh preamble is
+    // one. Drop the tag in dev only; every build keeps it.
+    {
+      name: 'csp-dev-only-off',
+      apply: 'serve',
+      transformIndexHtml: (html) => html.replace(/\s*<meta http-equiv="Content-Security-Policy"[^>]*>/, ''),
+    },
+  ],
   server: {
     port: 5188,
     strictPort: true,

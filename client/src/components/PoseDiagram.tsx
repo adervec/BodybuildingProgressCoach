@@ -22,5 +22,6 @@ export function PoseDiagram({ poseId, maxWidth = 200 }: { poseId: string; maxWid
       </div>
     );
   }
+  // Safe: the SVG is generated from built-in pose geometry (numbers and fixed ids), never outside text.
   return <div className="pose-fig" style={{ maxWidth, margin: '0 auto' }} dangerouslySetInnerHTML={{ __html: svg }} />;
 }

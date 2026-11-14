@@ -2,10 +2,13 @@ name: CI
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
   pull_request:
-    branches: [main, dev]
+    branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 # Cancel superseded runs on the same ref (e.g. rapid pushes to a PR).
 concurrency:
@@ -35,6 +38,10 @@ jobs:
       # npm workspaces: a single root `npm ci` installs server + client from the root lockfile.
       - name: Install dependencies
         run: npm ci
+
+      # House standard: no high or critical advisories in the dependency tree.
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
 
       - name: Typecheck (server + client)
         run: npm run typecheck
