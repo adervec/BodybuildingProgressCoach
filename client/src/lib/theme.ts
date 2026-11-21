@@ -16,7 +16,7 @@ interface HouseThemes {
   theme?(): string;
   themeNow?(): HouseTheme;
 }
-const house = (): HouseThemes => (window as unknown as { appFont?: HouseThemes }).appFont ?? {};
+const fontJs = (): HouseThemes => (window as unknown as { appFont?: HouseThemes }).appFont ?? {};
 
 // All eleven house colours, from theme.css (lines blended onto the background, since the house
 // palette is opaque hex).
@@ -39,16 +39,17 @@ export function lookFor(choice: string, deviceDark: boolean): Look {
 
 /** Register Ink and Marble once, at start-up (labels in the reader's language). */
 export function registerThemes() {
-  house().addThemes?.(EXTRA_THEMES.map((x) => ({ ...x, label: t(x.label) })));
+  const appFont = fontJs();
+  appFont.addThemes?.(EXTRA_THEMES.map((x) => ({ ...x, label: t(x.label) })));
 }
 
 /** Keep <html data-theme> in step with the reader's choice and the device; returns an unsubscribe. */
 export function followTheme(): () => void {
   const mq = matchMedia('(prefers-color-scheme: dark)');
   const apply = () => {
-    const h = house();
-    const choice = h.theme?.() ?? 'system';
-    const dark = choice === 'system' ? h.themeNow?.().dark ?? mq.matches : mq.matches;
+    const appFont = fontJs();
+    const choice = appFont.theme?.() ?? 'system';
+    const dark = choice === 'system' ? appFont.themeNow?.().dark ?? mq.matches : mq.matches;
     document.documentElement.setAttribute('data-theme', lookFor(choice, dark));
   };
   apply();
