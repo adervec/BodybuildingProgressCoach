@@ -164,6 +164,7 @@ export function Dashboard() {
         <Link to="/athletes" className="btn primary">
           <Icon name="athletes" size={14} /> {t('Go to athletes')}
         </Link>
+        <Appearance />
       </div>
     );
   }
@@ -288,11 +289,7 @@ export function Dashboard() {
       </div>
       {loading && <p className="muted tiny" style={{ marginTop: 16 }}>{t('Loading…')}</p>}
 
-      <div style={{ marginTop: 24 }}>
-        <h3>{t('Font')}</h3>
-        {/* shared picker from https://adervec.github.io/font.js; the choice applies to every app by this maker */}
-        {createElement('app-font-picker')}
-      </div>
+      <Appearance />
 
       <div style={{ marginTop: 24 }}>
         <h3>{t('Coach · folder cowork')}</h3>
@@ -300,7 +297,22 @@ export function Dashboard() {
           {t('Hand the numbers — body comp and pose scores, never photos — to an agent through a folder (CoworkSyncHub, Claude Desktop, or a person). The reply shows here. Nothing is uploaded.')}
         </p>
         <div ref={coworkHost} />
-        {coachReply && <pre className="card" style={{ whiteSpace: 'pre-wrap', marginTop: 10, font: 'inherit', fontSize: 13 }}>{coachReply}</pre>}
+        {coachReply && <pre className="card" data-clamp="" style={{ whiteSpace: 'pre-wrap', marginTop: 10, font: 'inherit', fontSize: 13 }}>{coachReply}</pre>}
+      </div>
+    </div>
+  );
+}
+
+/** Font and theme, reachable before any athlete exists. */
+function Appearance() {
+  return (
+    <div style={{ marginTop: 24 }}>
+      <h3>{t('Font')}</h3>
+      {/* shared picker from https://adervec.github.io/font.js; the choice applies to every app by this maker */}
+      {createElement('app-font-picker')}
+      <div style={{ marginTop: 12 }}>
+        {/* shared theme list (font.js) plus this app's Ink and Marble; the choice is kept per app */}
+        {createElement('app-theme-picker', { label: t('Theme') })}
       </div>
     </div>
   );

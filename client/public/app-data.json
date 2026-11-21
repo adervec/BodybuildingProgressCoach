@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "localStorage": ["bpc.*", "bpc-*", "ls.*"],
+  "indexedDB": ["living-sculpture", "ls-sync"],
+  "drive": ["living-sculpture-data.json"],
+  "caches": [],
+  "export": "Backup > Sync & backup > Back up only (to a folder or Google Drive)"
+}

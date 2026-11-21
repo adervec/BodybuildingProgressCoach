@@ -55,9 +55,15 @@ async function hydrate(m: MediaRow): Promise<MediaAsset> {
   return { ...m, url: (await blobUrl(m.file_name)) ?? '', thumb_url: await blobUrl(m.thumb_name) };
 }
 
-// Maker-portal character sheet: a check-in happened. Same-origin localStorage, nothing leaves the browser.
-function portalActivity(amount = 1): void {
-  try { const k = 'portal-activity', a = JSON.parse(localStorage.getItem(k) || '[]'); a.push([Math.round(Date.now() / 1000), 'BodybuildingProgressCoach', 'checkin', amount]); localStorage.setItem(k, JSON.stringify(a.slice(-2000))); } catch (_) { /* quota — ignore */ }
+// House standard 25: tell the hub a check-in happened (appFont.logSession; it stays in the browser).
+// One check-in per local day, however many photos and measurements it took: the id makes a second
+// save that day, or a sync bringing it back, count once.
+function logCheckin(): void {
+  try {
+    (window as unknown as { appFont?: { logSession?: (s: object) => boolean } }).appFont?.logSession?.({
+      kind: 'checkin', minutes: 10, id: `checkin-${localDay()}`,
+    });
+  } catch { /* the check-in itself is saved; the ledger is a courtesy */ }
 }
 
 export const localApi = {
@@ -204,7 +210,6 @@ export const localApi = {
       fields: { captured_at?: string; pose_type?: string; division?: string; notes?: string },
       onProgress?: (pct: number) => void
     ): Promise<MediaAsset> => {
-      portalActivity();
       if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
         throw new Error('Only image and video files are supported.');
       }
@@ -254,6 +259,7 @@ export const localApi = {
         return put(t, 'media', row);
       });
       onProgress?.(100);
+      logCheckin();
       return hydrate({ ...row, id: Number(id) });
     },
   },
@@ -327,7 +333,6 @@ export const localApi = {
     },
 
     create: async (athleteId: number, payload: Partial<BodyComp>): Promise<BodyComp> => {
-      portalActivity();
       if (!payload.measured_at) throw new Error('measured_at is required');
       const row = {
         athlete_id: athleteId,
@@ -342,6 +347,7 @@ export const localApi = {
         created_at: now(),
       };
       const id = await tx('bodycomp', 'readwrite', (t) => put(t, 'bodycomp', row));
+      logCheckin();
       return { ...row, id: Number(id) } as BodyComp;
     },
 

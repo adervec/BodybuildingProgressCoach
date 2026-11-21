@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api } from '../api';
 import type { Athlete } from '../lib/types';
-import { pageTheme } from '../lib/poses';
+import { followTheme } from '../lib/theme';
 
 interface AppState {
   athletes: Athlete[];
@@ -52,15 +52,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const current = useMemo(() => athletes.find((a) => a.id === currentId) ?? null, [athletes, currentId]);
 
-  // Theme follows the active athlete's category (ink for men's, marble for women's); with no athlete
-  // chosen it follows the device's light/dark setting, live.
-  useEffect(() => {
-    const mq = matchMedia('(prefers-color-scheme: dark)');
-    const apply = () => document.documentElement.setAttribute('data-theme', pageTheme(current?.category, mq.matches));
-    apply();
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
-  }, [current]);
+  // The page theme: the reader's choice from the shared list, or (System) the device's dark/light.
+  useEffect(followTheme, []);
 
   const selectAthlete = useCallback((id: number | null) => {
     setCurrentId(id);

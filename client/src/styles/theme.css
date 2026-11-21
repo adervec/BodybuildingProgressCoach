@@ -74,6 +74,36 @@
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012 0.05' numOctaves='4' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0.18 0 0 0 0 0.14 0 0 0 0 0.09 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
+/* Any theme from the shared base list (font.js sets --t-* on <html>): map its palette onto ours.
+   Flat surfaces and no grain, so every base theme reads exactly as designed (High contrast too). */
+:root[data-theme='house'] {
+  color-scheme: var(--t-scheme);
+  --bg: var(--t-bg);
+  --bg-2: var(--t-surface2);
+  --bg-image: var(--t-bg);
+  --surface: var(--t-surface);
+  --surface-solid: var(--t-surface);
+  --surface-2: var(--t-surface2);
+
+  --text: var(--t-text);
+  --text-dim: var(--t-dim);
+  --text-mute: color-mix(in srgb, var(--t-dim) 80%, var(--t-bg));
+
+  --accent: var(--t-accent);
+  --accent-bright: var(--t-accent);
+  --accent-deep: var(--t-accent);
+  --on-accent: var(--t-on-accent);
+  --good: var(--t-good);
+  --warn: var(--t-warn);
+  --bad: var(--t-bad);
+
+  --line: var(--t-line);
+  --line-soft: color-mix(in srgb, var(--t-line) 45%, transparent);
+  --shadow: 0 24px 48px -28px color-mix(in srgb, var(--t-text) 35%, transparent);
+
+  --grain-opacity: 0;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
