@@ -109,6 +109,23 @@ export function forgetBlobUrl(fileName: string | null | undefined): void {
   }
 }
 
+/**
+ * Thumbnails share the `blobs` store with the originals, so they need their own key: a thumbnail is
+ * named `<uuid>.jpg` (the server keeps it in a separate folder), which for a JPEG photo IS the
+ * original's name. Until 2026-11-21 the thumbnail was stored under that bare name and overwrote the
+ * original of every JPEG upload. The `thumb_name` column is unchanged, so backups still match the server.
+ */
+export const thumbKey = (thumbName: string) => `thumb:${thumbName}`;
+
+/** A media row's thumbnail URL: the new key, then the pre-2026-11-21 bare key, then the photo itself. */
+export async function thumbUrl(m: { thumb_name: string | null; file_name: string; kind: string }): Promise<string | null> {
+  if (m.thumb_name) {
+    const url = (await blobUrl(thumbKey(m.thumb_name))) ?? (await blobUrl(m.thumb_name));
+    if (url) return url;
+  }
+  return m.kind === 'photo' ? blobUrl(m.file_name) : null;
+}
+
 /** Rough "is this browser going to let me keep gigabytes of photos" check, for the UI to surface. */
 export async function storageEstimate(): Promise<{ usage: number; quota: number; persisted: boolean } | null> {
   if (!navigator.storage?.estimate) return null;

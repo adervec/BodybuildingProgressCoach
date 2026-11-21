@@ -138,6 +138,14 @@
   font-family: var(--display);
   color: var(--accent-bright);
   font-size: 18px;
+  overflow: hidden;
+}
+/* the athlete's latest photo, cropped into the circle (without this it rendered at full size) */
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 .athlete-switch .name {
   font-family: var(--display);

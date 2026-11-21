@@ -8,7 +8,7 @@
  * reports disabled, which is the same path the app already takes when no key is configured.
  */
 import type { Athlete, BodyComp, Category, MediaAsset, PoseAnalysis, PoseMetrics, Landmark } from './lib/types';
-import { tx, get, getAll, put, del, byIndex, now, blobUrl, forgetBlobUrl } from './lib/local/store';
+import { tx, get, getAll, put, del, byIndex, now, blobUrl, forgetBlobUrl, thumbKey, thumbUrl } from './lib/local/store';
 import { decode, thumbnail, videoPoster } from './lib/local/image';
 import { localDay } from '../../server/src/lib/localDay';
 
@@ -52,7 +52,7 @@ const VALID_CATEGORIES = new Set<string>([
 ]);
 
 async function hydrate(m: MediaRow): Promise<MediaAsset> {
-  return { ...m, url: (await blobUrl(m.file_name)) ?? '', thumb_url: await blobUrl(m.thumb_name) };
+  return { ...m, url: (await blobUrl(m.file_name)) ?? '', thumb_url: await thumbUrl(m) };
 }
 
 // House standard 25: tell the hub a check-in happened (appFont.logSession; it stays in the browser).
@@ -88,7 +88,7 @@ export const localApi = {
                 media_count: mine.length,
                 comp_count: comps.filter((c) => c.athlete_id === a.id).length,
                 // An object URL, not a file name — `thumbSrc` in api.ts accepts either.
-                latest_thumb: await blobUrl(newest?.thumb_name),
+                latest_thumb: newest ? await thumbUrl(newest) : null,
               };
             })
         )
@@ -136,7 +136,7 @@ export const localApi = {
         for (const m of media) {
           await del(t, 'media', m.id);
           await del(t, 'blobs', m.file_name);
-          if (m.thumb_name) await del(t, 'blobs', m.thumb_name);
+          if (m.thumb_name) { await del(t, 'blobs', thumbKey(m.thumb_name)); await del(t, 'blobs', m.thumb_name); }
         }
         for (const a of await byIndex<AnalysisRow>(t, 'analyses', 'athlete_id', id)) await del(t, 'analyses', a.id);
         for (const b of await byIndex<BodyCompRow>(t, 'bodycomp', 'athlete_id', id)) await del(t, 'bodycomp', b.id);
@@ -146,6 +146,7 @@ export const localApi = {
       for (const m of doomed) {
         forgetBlobUrl(m.file_name);
         forgetBlobUrl(m.thumb_name);
+        if (m.thumb_name) forgetBlobUrl(thumbKey(m.thumb_name));
       }
       return null;
     },
@@ -195,12 +196,13 @@ export const localApi = {
         if (!cur) throw new Error('not found');
         for (const a of await byIndex<AnalysisRow>(t, 'analyses', 'media_id', id)) await del(t, 'analyses', a.id);
         await del(t, 'blobs', cur.file_name);
-        if (cur.thumb_name) await del(t, 'blobs', cur.thumb_name);
+        if (cur.thumb_name) { await del(t, 'blobs', thumbKey(cur.thumb_name)); await del(t, 'blobs', cur.thumb_name); }
         await del(t, 'media', id);
         return cur;
       });
       forgetBlobUrl(row.file_name);
       forgetBlobUrl(row.thumb_name);
+      if (row.thumb_name) forgetBlobUrl(thumbKey(row.thumb_name));
       return null;
     },
 
@@ -255,7 +257,7 @@ export const localApi = {
       };
       const id = await tx(['media', 'blobs'], 'readwrite', async (t) => {
         await put(t, 'blobs', file, fileName);
-        if (thumb) await put(t, 'blobs', thumb, thumbName);
+        if (thumb) await put(t, 'blobs', thumb, thumbKey(thumbName)); // never the original's key
         return put(t, 'media', row);
       });
       onProgress?.(100);
@@ -319,7 +321,7 @@ export const localApi = {
           media_pose: m!.pose_type,
           file_name: m!.file_name,
           kind: m!.kind,
-          thumb_url: await blobUrl(m!.thumb_name),
+          thumb_url: await thumbUrl(m!),
           url: (await blobUrl(m!.file_name)) ?? '',
         }))
       ) as unknown as Promise<PoseAnalysis[]>;
