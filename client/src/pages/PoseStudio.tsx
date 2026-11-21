@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useApp } from '../state/store';
-import { api } from '../api';
+import { api, IS_STATIC } from '../api';
 import type { AiCoaching, Landmark, MediaAsset, PoseMetrics } from '../lib/types';
 import { posesForCategory, findPose, poseLabel } from '../lib/poses';
 import { analyzePose } from '../lib/geometry';
@@ -12,7 +12,8 @@ import { LandmarkCanvas } from '../components/LandmarkCanvas';
 import { ScoreBar, BigScore } from '../components/Score';
 import { Icon } from '../components/Icon';
 import { shortDate, scoreColor } from '../lib/format';
-import { reviewFor, requestPoseReview, type PoseReview } from '../lib/poseReview';
+import { reviewFor, type PoseReview, CRITERIA, CRITERION_LABEL } from '../lib/poseReview';
+import { requestCowork } from '../lib/coworkQueue';
 import { t, fmt } from '../lib/i18n';
 
 /** Put React nodes into a translated sentence at its {placeholders} (so markup never splits a sentence). */
@@ -112,7 +113,7 @@ export function PoseStudio() {
         landmarks: res.landmarks,
       });
       toast(t('Geometry analysis saved'));
-      requestPoseReview();
+      requestCowork('pose-review', 'checkin-review');
     } catch (err) {
       toast((err as Error).message);
     } finally {
@@ -212,20 +213,28 @@ export function PoseStudio() {
                   </div>
 
                   <div className="card">
-                    {analysis ? (
-                      <>
-                        <ScorePanel a={analysis} />
-                        {review && <ReviewPanel r={review} />}
-                      </>
+                    {review ? (
+                      <ReviewPanel r={review} />
                     ) : (
-                      <p className="muted tiny">{t('Run geometry analysis to measure symmetry, proportions and reference-form match for this photo.')}</p>
+                      <p className="tiny muted" style={{ marginBottom: 14 }}>
+                        <Icon name="ai" size={12} /> {t('Not judged yet: this photo goes to your cowork folder with the next pose review (Dashboard).')}
+                      </p>
                     )}
+                    <div style={review ? { marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--line)' } : undefined}>
+                      <p className="kicker" style={{ marginBottom: 10 }}>{t('Geometry check')}</p>
+                      {analysis ? (
+                        <ScorePanel a={analysis} />
+                      ) : (
+                        <p className="muted tiny">{t('Run geometry analysis to measure symmetry, proportions and reference-form match for this photo.')}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* AI coaching */}
-              <div className="card">
+              {/* Instant AI coaching through the self-hosted server's own API key. The browser-only build
+                  has no server, so there the cowork judge above is the AI read and this card is hidden. */}
+              {(aiEnabled || !IS_STATIC) && <div className="card">
                 <div className="row spread" style={{ marginBottom: 10 }}>
                   <p className="kicker"><Icon name="ai" size={12} /> {t('AI coach')} {aiEnabled ? `· ${aiModel}` : ''}</p>
                   {aiEnabled && selected && (
@@ -248,7 +257,7 @@ export function PoseStudio() {
                     {t('Runs the selected photo against the same judging rubric. Note: this sends the photo to Anthropic for that one request.')}
                   </p>
                 )}
-              </div>
+              </div>}
             </>
           )}
         </div>
@@ -304,18 +313,32 @@ function ScorePanel({ a }: { a: LocalAnalysis }) {
 
 function ReviewPanel({ r }: { r: PoseReview }) {
   return (
-    <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--line, rgba(127,127,127,.25))' }}>
-      <div className="row spread" style={{ marginBottom: 6 }}>
-        <p className="kicker"><Icon name="ai" size={12} /> {t('AI review')}</p>
-        <span className="pill">{t('grade {grade}', { grade: r.grade })}</span>
+    <div>
+      <div className="row spread" style={{ marginBottom: 10 }}>
+        <p className="kicker"><Icon name="ai" size={12} /> {t('AI judge')}</p>
+        <span className="pill solid">{t('grade {grade}', { grade: r.grade })}</span>
       </div>
+      {CRITERIA.some((c) => r.scores?.[c] != null) && (
+        <div style={{ marginBottom: 12 }}>
+          {CRITERIA.filter((c) => r.scores?.[c] != null).map((c) => (
+            <ScoreBar key={c} label={t(CRITERION_LABEL[c])} value={r.scores![c]! * 10} />
+          ))}
+        </div>
+      )}
+      {r.lagging && r.lagging.length > 0 && (
+        <p className="tiny" style={{ marginBottom: 8 }}><b>{t('Lagging:')}</b> {r.lagging.join(', ')}</p>
+      )}
       <div data-clamp="6">
         <p className="tiny" style={{ color: 'var(--text-dim)' }}>{r.summary}</p>
         {r.strengths.length > 0 && <Section title={t('Strengths')}>{r.strengths.map((s, i) => <li key={i}>{s}</li>)}</Section>}
         {r.fixes.length > 0 && <Section title={t('Fix')}>{r.fixes.map((s, i) => <li key={i}>{s}</li>)}</Section>}
         {r.next && <p className="tiny" style={{ marginTop: 8 }}><b>{t('Next:')}</b> {r.next}</p>}
       </div>
-      <p className="tiny muted" style={{ marginTop: 6 }}>{t("From your cowork folder. The form score above is still the app's own.")}</p>
+      <p className="tiny muted" style={{ marginTop: 6 }}>
+        {r.fromPhoto
+          ? t('Judged from the photo by your cowork agent. The geometry check below is the app’s own measurement.')
+          : t('Judged from the numbers only (no photo went with that request). The geometry check below is the app’s own measurement.')}
+      </p>
     </div>
   );
 }

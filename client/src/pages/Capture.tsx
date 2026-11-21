@@ -10,6 +10,7 @@ import { shortDate, todayISO } from '../lib/format';
 import { DropZone } from '../components/DropZone';
 import { captureDate } from '../lib/exif';
 import { t } from '../lib/i18n';
+import { requestCowork } from '../lib/coworkQueue';
 
 interface QueueItem {
   name: string;
@@ -88,6 +89,7 @@ export function Capture() {
     );
     await reload();
     await refreshAthletes();
+    if (failed < list.length) requestCowork('pose-review', 'checkin-review'); // a check-in ended: ask the AI judge
   }
 
   async function doUpload(e: React.FormEvent) {
@@ -192,7 +194,7 @@ export function Capture() {
             {progress != null ? t('Uploading {p}%', { p: progress }) : files.length > 1 ? t('Upload {n} files', { n: files.length }) : t('Upload')}
           </button>
           <p className="tiny muted" style={{ marginTop: 12 }}>
-            {t('Photos are processed on your machine for geometry analysis and never leave it unless you explicitly run AI coaching.')}
+            {t('Photos stay on your machine. If you have connected a cowork folder (Dashboard), posing photos also go into that folder for your AI judge, downsized and with location data removed; you can switch that off there.')}
           </p>
         </form>
 

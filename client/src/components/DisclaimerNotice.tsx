@@ -84,7 +84,7 @@ export function DisclaimerNotice() {
           <p className="muted tiny">
             {t('Scores are reproducible')} <em>{t('geometry')}</em>
             {t(', not a verdict on your health or worth.')}{' '}
-            {t('"Reference-form" targets are stylized teaching diagrams, not a real judging panel. The optional AI critique is an automated opinion that can be wrong, and only runs — sending the analyzed image to Anthropic — if you add your own API key. Posing and training carry a risk of injury; train sensibly and consult a professional. Provided "as is," without warranty.')}
+            {t('"Reference-form" targets are stylized teaching diagrams, not a real judging panel. The AI judge and coach are automated opinions that can be wrong: they work only through a cowork folder you connect (posing photos go there unless you switch that off) or a self-hosted API key. Posing and training carry a risk of injury; train sensibly and consult a professional. Provided "as is," without warranty.')}
           </p>
           <p className="tiny muted">
             {t('Full')}{' '}

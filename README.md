@@ -227,7 +227,9 @@ automatically, add a deploy job to the publish workflow once you've chosen a hos
 - **Self-hosted & offline.** The MediaPipe runtime + pose model and the web fonts are served from
   the app's own origin (provisioned at build time), so out of the box the app makes **no
   third-party network requests** and runs fully offline. Inference runs locally; photos are never
-  uploaded for geometry analysis. Two opt-in features can reach the network — AI coaching
+  uploaded for geometry analysis. The AI judge works through a cowork folder you pick: posing
+  photos (downsized, EXIF stripped) go into that folder for your agent unless you switch it off.
+  Two opt-in features can reach the network — AI coaching
   (Anthropic) and Google Drive backup (Google) — and both are off until you turn them on.
 - **Reference-form angles are stylized** (drawn to teach shape), so that sub-score is directional;
   symmetry and proportions are the camera-robust headline metrics.

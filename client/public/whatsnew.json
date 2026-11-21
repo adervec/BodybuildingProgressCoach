@@ -1,5 +1,13 @@
 [
  {
+  "date": "2026-11-21",
+  "items": [
+   "Your AI judge now looks at the photos themselves, not just body landmarks: each posing photo gets a grade and a 0-10 score for muscularity, conditioning, symmetry, proportion, presentation and execution, plus the body parts that lag. Side poses get graded too. It leads in Pose Studio; the geometry measurement stays below it as a check.",
+   "New check-in review: the AI puts each check-in's photos beside your earlier ones of the same pose and tells you your visual body-fat range, whether conditioning is improving, what improved and what lags. The latest one leads the Dashboard.",
+   "The coach also sees your latest check-in photos. Photos go only into the cowork folder you pick, downsized and with location data removed, and you can switch that off on the Dashboard."
+  ]
+ },
+ {
   "date": "2026-11-20",
   "items": [
    "Choose a theme on the Dashboard, under the font picker: the house themes every app shares, plus this app's own Ink and Marble. Until you choose, the app follows your device: Ink when it is dark, Marble when it is light."

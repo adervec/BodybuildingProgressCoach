@@ -11,7 +11,7 @@ import { PoseDiagram } from '../components/PoseDiagram';
 import { ScoreBar, BigScore } from '../components/Score';
 import { Icon } from '../components/Icon';
 import { todayISO } from '../lib/format';
-import { requestPoseReview } from '../lib/poseReview';
+import { requestCowork } from '../lib/coworkQueue';
 import { t, fmt } from '../lib/i18n';
 
 /** Judge's call-out, spoken. Native speech synthesis — silently absent where unsupported. */
@@ -239,7 +239,7 @@ export function Mirror() {
           metrics: out.metrics,
           landmarks: res.landmarks,
         });
-        requestPoseReview();
+        requestCowork('pose-review', 'checkin-review');
       }
       toast(live?.form != null ? t('Saved {pose} · form {form}', { pose: pose.label, form: live.form }) : t('Saved {pose}', { pose: pose.label }));
       await refreshAthletes();

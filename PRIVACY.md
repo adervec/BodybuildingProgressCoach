@@ -4,18 +4,19 @@ This document describes **how the software behaves** with your data. It is not a
 legal privacy policy. If you deploy this app for other people, *you* become
 responsible for the data you collect from them (see "Self-hosting" below).
 
-> Plain-language summary: by default, your photos, videos, and measurements stay on
-> your own machine. The web fonts and the ML model are bundled with the app (no
-> CDNs), so the only times anything leaves your computer are if **you** turn on the
-> optional AI critique or the optional cloud backup.
+> Plain-language summary: your photos, videos, and measurements stay on your own
+> machine. The web fonts and the ML model are bundled with the app (no CDNs), so the
+> only times anything leaves your computer are if **you** connect a cowork folder for
+> the AI judge and coach (posing photos go into that folder unless you switch it off),
+> turn on the optional cloud backup, or set up the self-hosted AI critique.
 
 ## Two builds, same guarantee
 The **hosted** build at `adervec.github.io/BodybuildingProgressCoach` has no server
 at all: your photos, measurements and analyses are held in **your own browser's
-IndexedDB** and never transmitted. GitHub serves the page's static files and
-nothing else — no upload endpoint exists. The trade-offs are that clearing site
-data erases everything (back up!) and AI coaching is unavailable, because there is
-no server to hold an API key.
+IndexedDB**. GitHub serves the page's static files and nothing else — no upload
+endpoint exists. The trade-offs are that clearing site data erases everything (back
+up!) and the instant API-key AI critique is unavailable, because there is no server
+to hold a key; the AI judge works through a cowork folder instead (item 3 below).
 
 The **self-hosted** build stores the same data on your own machine under
 `server/data/`. Everything below describes it; the hosted build behaves the same
@@ -58,7 +59,19 @@ minus the AI section.
 
    Your `ANTHROPIC_API_KEY` is server-side configuration and is **never** included
    in a backup.
-3. **That's all of them.** The web fonts, the MediaPipe WASM runtime, and the
+3. **AI judge & coach through a cowork folder (only once you connect a folder).** On
+   the Dashboard you can pick a folder on your machine; the app then writes requests
+   there (`coach/`, `pose-review/`, `checkin-review/`) for an agent you choose (Claude
+   Desktop, CoworkSyncHub, or a person) to read and answer. The requests hold your
+   measurements, geometry scores and body landmarks and, **unless you switch it off**
+   ("Send my posing photos to the cowork folder"), your posing photos: downsized to
+   1600 px and re-encoded, which strips EXIF (GPS location, camera details). The app
+   itself sends nothing anywhere: the files sit in the folder you picked. What the
+   agent does with them is governed by that agent (for Claude, Anthropic's Terms and
+   Usage Policy), and if the folder is a Drive/Dropbox/OneDrive sync folder, its
+   client uploads them. Replies are checked before use and wait for your approval;
+   photos written for earlier requests stay in the folder until you delete them.
+4. **That's all of them.** The web fonts, the MediaPipe WASM runtime, and the
    pose-detection model are all **self-hosted** (served from the app's own origin),
    so with both options off the app makes **no third-party network requests** and
    works fully offline. Pose detection always runs entirely in your browser.

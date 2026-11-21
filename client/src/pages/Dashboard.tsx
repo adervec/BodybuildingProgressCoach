@@ -9,8 +9,12 @@ import { PageHead, EmptyState } from '../components/Layout';
 import { ScoreBar, Delta } from '../components/Score';
 import { Icon } from '../components/Icon';
 import { shortDate, formatDate, scoreColor } from '../lib/format';
-import { coachChannel, COACH_REPLY_KEY } from '../lib/coachChannel';
-import { POSE_REVIEW_CHANNEL, POSE_REVIEW_INSTRUCTIONS, buildReviewPayload, poseReviewChannel, setCoworkPanel } from '../lib/poseReview';
+import { COACH_REPLY_KEY } from '../lib/coachChannel';
+import { mountCowork } from '../lib/coworkSetup';
+import { setCoworkPanel } from '../lib/coworkQueue';
+import { latestCheckinReview, type CheckinReview } from '../lib/checkinReview';
+import { reviewFor } from '../lib/poseReview';
+import { photosEnabled, setPhotosEnabled, engineTakesPhotos } from '../lib/coworkPhotos';
 import { t, fmt } from '../lib/i18n';
 
 /** Put React nodes into a translated sentence at its {placeholders} (so markup never splits a sentence). */
@@ -21,38 +25,6 @@ function fill(text: string, parts: Record<string, React.ReactNode>): React.React
   });
 }
 
-// Folder cowork through the maker's shared panel (https://adervec.github.io/cowork.js, fs mode):
-// the panel drives a folder you pick; we hand it the numbers (body comp + pose scores — never photos)
-// as coach/request.json and show whatever an agent writes to coach/reply.json.
-type CoworkGlobal = { mount: (host: HTMLElement, cfg: unknown) => { push(only?: string): unknown } };
-function loadCowork(): Promise<CoworkGlobal | null> {
-  const w = window as unknown as { cowork?: CoworkGlobal };
-  if (w.cowork) return Promise.resolve(w.cowork);
-  return new Promise((res) => {
-    const s = document.createElement('script');
-    s.src = 'https://adervec.github.io/cowork.js';
-    s.async = true;
-    s.onload = () => res(w.cowork ?? null);
-    s.onerror = () => res(null);
-    document.head.appendChild(s);
-  });
-}
-function djb2(text: string): string {
-  let h = 5381;
-  for (let i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0;
-  return h.toString(16);
-}
-const COACH_INSTRUCTIONS = `# Bodybuilding Progress Coach — coach channel
-
-Read \`coach/request.json\`: \`payload.athlete\` (name, category, height), \`payload.bodyComp\` (dated weight /
-body-fat / lean-mass / measurements, oldest first) and \`payload.poseScores\` (dated geometry scores per pose:
-form, symmetry, reference match). No photos travel. Write \`coach/reply.json\`:
-
-\`\`\`json
-{ "requestHash": "<copy the request's requestHash verbatim>",
-  "reply": "<honest, specific coaching in markdown: what the trends show, which pose or measurement to work on and how, what is clearly improving. Not medical advice; encouraging, no shaming.>" }
-\`\`\`
-`;
 
 export function Dashboard() {
   const { current } = useApp();
@@ -76,59 +48,29 @@ export function Dashboard() {
   const latest = comp.at(-1) ?? null;
   const prev = comp.length > 1 ? comp.at(-2)! : null;
 
-  // the shared cowork panel reads the freshest data through refs, so it never goes stale
+  // The shared cowork panel (lib/coworkSetup.ts); it reads the athlete through a ref, so never goes stale.
   const coworkHost = useRef<HTMLDivElement>(null);
-  const dataRef = useRef({ current, comp, analyses });
-  dataRef.current = { current, comp, analyses };
+  const athleteRef = useRef(current);
+  athleteRef.current = current;
   const [coachReply, setCoachReply] = useState(() => {
     try { return localStorage.getItem(COACH_REPLY_KEY) || ''; } catch { return ''; }
   });
   useEffect(() => {
     const host = coworkHost.current;
     if (!host) return;
-    loadCowork().then((cw) => {
-      if (!cw || !host.isConnected || host.childElementCount) return;
-      const coach = coachChannel(setCoachReply);
-      const freshAnalyses = () => (dataRef.current.current ? api.analysis.series(dataRef.current.current.id) : Promise.resolve([]));
-      const poseReview = poseReviewChannel(freshAnalyses);
-      const panel = cw.mount(host, {
-        app: 'bodybuildingprogresscoach',
-        manifest: { protocol: 'cowork-manifest', protocolVersion: 1, app: 'bodybuildingprogresscoach',
-          channels: [
-            { name: 'coach', request: ['coach/request.json'], instructions: 'coach/INSTRUCTIONS.md', replyPath: 'coach/reply.json' },
-            { name: 'pose-review', request: ['pose-review/request.json'], instructions: 'pose-review/INSTRUCTIONS.md', replyPath: 'pose-review/reply.json' },
-          ] },
-        files: async (ch: string) => {
-          const d = dataRef.current;
-          if (ch === POSE_REVIEW_CHANNEL) {
-            const payload = buildReviewPayload(d.current, await freshAnalyses());
-            return {
-              'pose-review/request.json': { protocol: 'bodybuildingprogresscoach-pose-review', protocolVersion: 1, kind: 'pose-review-request',
-                generatedAt: new Date().toISOString(), requestHash: djb2(JSON.stringify(payload)), payload },
-              'pose-review/INSTRUCTIONS.md': POSE_REVIEW_INSTRUCTIONS,
-            };
-          }
-          const payload = {
-            athlete: d.current ? { name: d.current.name, category: d.current.category, heightCm: d.current.height_cm } : null,
-            bodyComp: d.comp.slice(-30).map((c) => ({ at: c.measured_at, weight: c.weight, unit: c.weight_unit, bodyFatPct: c.body_fat_pct,
-              leanMass: c.lean_mass, measurements: c.measurements })),
-            poseScores: d.analyses.slice(-40).map((a) => ({ at: a.captured_at ?? null, pose: a.pose_type ?? a.media_pose ?? null,
-              form: a.form_score, symmetry: a.symmetry_score, refMatch: a.ref_match_score, source: a.source })),
-          };
-          return {
-            'coach/request.json': { protocol: 'bodybuildingprogresscoach-coach', protocolVersion: 1, kind: 'coach-request',
-              generatedAt: new Date().toISOString(), requestHash: djb2(JSON.stringify(payload)), payload },
-            'coach/INSTRUCTIONS.md': COACH_INSTRUCTIONS,
-          };
-        },
-        // v1 fallback; cowork v2 uses `channels` (review before applying, undo from the history)
-        apply: (ch: string, reply: unknown) => (ch === POSE_REVIEW_CHANNEL ? poseReview.apply(reply) : coach.apply(reply)),
-        channels: { coach, [POSE_REVIEW_CHANNEL]: poseReview },
-      });
-      setCoworkPanel(panel);
-    });
+    void mountCowork(host, () => athleteRef.current, setCoachReply);
     return () => { setCoworkPanel(null); host.replaceChildren(); };
   }, []);
+
+  // The AI's read of the latest check-in leads the page when there is one.
+  const [reviewTick, setReviewTick] = useState(0);
+  useEffect(() => {
+    const bump = () => setReviewTick((n) => n + 1);
+    for (const e of ['bpc-checkin-reviews', 'bpc-pose-reviews', 'storage']) window.addEventListener(e, bump);
+    return () => { for (const e of ['bpc-checkin-reviews', 'bpc-pose-reviews', 'storage']) window.removeEventListener(e, bump); };
+  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const checkin = useMemo(() => latestCheckinReview(current?.name), [current, reviewTick]);
 
   const chartData = useMemo(
     () => comp.map((c) => ({ date: shortDate(c.measured_at), weight: c.weight, bf: c.body_fat_pct })),
@@ -145,11 +87,16 @@ export function Dashboard() {
       const existing = byPose.get(key);
       if (!existing || (a.captured_at ?? '') >= (existing.captured_at ?? '')) byPose.set(key, a);
     }
+    // the AI judge's grade of the newest photo of each pose, when it has one
+    const newest = new Map<string, MediaAsset>();
+    for (const m of media) if (m.kind === 'photo' && m.pose_type && (!newest.get(m.pose_type) || m.captured_at >= newest.get(m.pose_type)!.captured_at)) newest.set(m.pose_type, m);
     return posesForCategory(current.category).map((p) => ({
       pose: p,
       score: byPose.get(p.id)?.form_score ?? null,
+      grade: reviewFor(newest.get(p.id)?.file_name)?.grade ?? null,
     }));
-  }, [analyses, current]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analyses, media, current, reviewTick]);
 
   const focus = useMemo(() => {
     const scored = poseScores.filter((p) => p.score != null) as { pose: { id: string; label: string }; score: number }[];
@@ -173,10 +120,14 @@ export function Dashboard() {
     <div>
       <PageHead kicker={t('Dashboard · {date}', { date: formatDate(latest?.measured_at) })} title={current.name} />
 
-      <div className="banner" style={{ marginBottom: 26 }}>
-        <b>{t('Honest & fair by design.')}</b>{' '}
-        {t('Scores come first from reproducible geometry — left/right symmetry and scale-normalized proportions measured from your own photos — judged against the criteria in the posing guides. AI commentary is optional and clearly labelled.')}
-      </div>
+      {checkin ? (
+        <CheckinCard day={checkin.day} r={checkin.review} />
+      ) : (
+        <div className="banner" style={{ marginBottom: 26 }}>
+          <b>{t('Honest & fair by design.')}</b>{' '}
+          {t('Your cowork agent reads your posing photos the way a judge would: muscularity, conditioning, symmetry, proportion and presentation, and what changed since last time. Underneath, the app measures reproducible geometry (left/right balance and proportions) as an objective check.')}
+        </div>
+      )}
 
       {/* KPI row */}
       <div className="cards-grid" style={{ marginBottom: 22 }}>
@@ -242,10 +193,10 @@ export function Dashboard() {
               </p>
             );
           })()}
-          {poseScores.some((p) => p.score != null) ? (
+          {poseScores.some((p) => p.score != null || p.grade) ? (
             <>
               {poseScores.map((p) => (
-                <ScoreBar key={p.pose.id} label={p.pose.label} value={p.score} />
+                <ScoreBar key={p.pose.id} label={p.grade ? t('{pose} · AI grade {grade}', { pose: p.pose.label, grade: p.grade }) : p.pose.label} value={p.score} />
               ))}
               {focus && (
                 <div className="banner" style={{ marginTop: 14 }}>
@@ -292,13 +243,77 @@ export function Dashboard() {
       <Appearance />
 
       <div style={{ marginTop: 24 }}>
-        <h3>{t('Coach · folder cowork')}</h3>
+        <h3>{t('AI judge & coach · folder cowork')}</h3>
         <p className="muted tiny" style={{ marginBottom: 10 }}>
-          {t('Hand the numbers — body comp and pose scores, never photos — to an agent through a folder (CoworkSyncHub, Claude Desktop, or a person). The reply shows here. Nothing is uploaded.')}
+          {t('An agent you choose (Claude Desktop, CoworkSyncHub, or a person) works through a folder you pick: it judges each posing photo, reviews each check-in against your earlier photos, and coaches from the trend. You approve each reply before it is added, and can undo it. This app uploads nothing itself.')}
         </p>
+        <PhotoSwitch />
         <div ref={coworkHost} />
         {coachReply && <pre className="card" data-clamp="" style={{ whiteSpace: 'pre-wrap', marginTop: 10, font: 'inherit', fontSize: 13 }}>{coachReply}</pre>}
       </div>
+    </div>
+  );
+}
+
+/** Whether posing photos go into the cowork folder (on by default). */
+function PhotoSwitch() {
+  const [on, setOn] = useState(photosEnabled);
+  return (
+    <div className="card" style={{ marginBottom: 12, padding: '14px 18px' }}>
+      <label className="row" style={{ gap: 10, cursor: 'pointer', alignItems: 'flex-start' }}>
+        <input type="checkbox" checked={on} style={{ width: 'auto', marginTop: 4 }} onChange={(e) => { setOn(e.target.checked); setPhotosEnabled(e.target.checked); }} />
+        <span>
+          <b>{t('Send my posing photos to the cowork folder')}</b>
+          <span className="tiny muted" style={{ display: 'block', marginTop: 4 }}>
+            {on
+              ? t('The agent sees the photos, downsized to 1600 px with location and camera details removed. If the folder is synced (Google Drive, Dropbox, OneDrive), the photos go to that service too. Turn this off and the agent works from the numbers only.')
+              : t('Off: the agent gets the numbers only (measurements, geometry scores and body landmarks), which cannot show muscle or conditioning.')}
+          </span>
+          {on && !engineTakesPhotos() && (
+            <span className="tiny" style={{ display: 'block', marginTop: 6, color: 'var(--warn)' }}>
+              {t('Waiting for the shared cowork panel to be updated: until then requests carry the numbers only.')}
+            </span>
+          )}
+        </span>
+      </label>
+    </div>
+  );
+}
+
+/** The AI's read of the latest check-in: leads the Dashboard when there is one. */
+function CheckinCard({ day, r }: { day: string; r: CheckinReview }) {
+  const trend: Record<string, string> = { improving: t('improving'), steady: t('steady'), declining: t('declining') };
+  return (
+    <div className="card" style={{ marginBottom: 26 }}>
+      <div className="row spread wrap" style={{ marginBottom: 10 }}>
+        <p className="kicker"><Icon name="ai" size={12} /> {t('Check-in review · {date}', { date: formatDate(day) })}</p>
+        <span className="pill solid">{t('grade {grade}', { grade: r.grade })}</span>
+      </div>
+      <div className="row wrap" style={{ gap: 18, marginBottom: 12 }}>
+        {r.bodyFat && <Kv k={t('Body fat (visual)')} v={r.bodyFat} />}
+        {r.conditioning && <Kv k={t('Conditioning')} v={trend[r.conditioning]} />}
+        {r.improved.length > 0 && <Kv k={t('Improved')} v={r.improved.join(', ')} />}
+        {r.lagging.length > 0 && <Kv k={t('Lagging')} v={r.lagging.join(', ')} />}
+      </div>
+      <div data-clamp="6">
+        <p style={{ color: 'var(--text-dim)', fontSize: 14 }}>{r.summary}</p>
+        {r.fixes.length > 0 && (
+          <ul className="tiny" style={{ marginTop: 8, paddingInlineStart: 18, color: 'var(--text-dim)' }}>
+            {r.fixes.map((f, i) => <li key={i}>{f}</li>)}
+          </ul>
+        )}
+        {r.next && <p className="tiny" style={{ marginTop: 8 }}><b>{t('Next:')}</b> {r.next}</p>}
+      </div>
+      {!r.fromPhoto && <p className="tiny muted" style={{ marginTop: 8 }}>{t('Read from the numbers only: no photos went with this request.')}</p>}
+    </div>
+  );
+}
+
+function Kv({ k, v }: { k: string; v: string }) {
+  return (
+    <div>
+      <div className="tiny" style={{ color: 'var(--text-mute)', fontFamily: 'var(--mono)', letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: 10 }}>{k}</div>
+      <div style={{ fontSize: 15 }}>{v}</div>
     </div>
   );
 }
