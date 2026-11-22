@@ -2,13 +2,13 @@
  * "Erase everything" for the browser-only build. Every app by this maker shares the
  * adervec.github.io origin, so this removes ONLY this app's own keys, databases and caches —
  * never localStorage.clear(). The shared font choice belongs to the portal and is left alone.
- * The cloud copy (Drive app folder / sync folder) is not touched; we only disconnect from it.
+ * The cloud copy is not touched; we only sign out of it.
  */
 import { closeDb, DB_NAME } from './store';
-import { SYNC_PROVIDERS, SYNC_IDB_NAME } from '../sync/syncProviders';
+import { SYNC_IDB_NAME, cloud } from '../sync/syncManager';
 import { t } from '../i18n';
 
-export const APP_KEYS = ['bpc.disclaimerAck.v1', 'bpc.currentAthleteId', 'ls.sync', 'ls.orientation', 'bpc-coach-reply',
+export const APP_KEYS = ['bpc.disclaimerAck.v1', 'bpc.currentAthleteId', 'ls.sync', 'ls.sync-legacy', 'ls.orientation', 'bpc-coach-reply',
   'bpc-pose-reviews', 'bpc-pose-review-due', 'bpc-checkin-reviews', 'bpc-cowork-photos', 'bpc-cowork-sent', 'bpc-cowork-due',
   'cowork-state:bodybuildingprogresscoach'];
 export const APP_DBS = [DB_NAME, SYNC_IDB_NAME];
@@ -38,7 +38,7 @@ function scrubPortal() {
 }
 
 export async function eraseEverything(): Promise<void> {
-  for (const p of SYNC_PROVIDERS) await p.disconnect().catch(() => {});
+  try { cloud()?.signOut(); } catch { /* not signed in */ }
   await closeDb();
   for (const name of APP_DBS) await deleteDb(name);
   for (const k of APP_KEYS) localStorage.removeItem(k);

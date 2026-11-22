@@ -40,19 +40,71 @@ backupRouter.get('/backup/export', (_req, res) => {
   res.json({ app: BACKUP_APP, version: BACKUP_VERSION, exportedAt: new Date().toISOString(), athletes: out });
 });
 
+function bundleError(bundle: { app?: string; version?: number; athletes?: unknown } | null): string | null {
+  if (!bundle || bundle.app !== BACKUP_APP) return 'Not a Living Sculpture backup file.';
+  if (Number(bundle.version) > BACKUP_VERSION) return `That backup was written by a newer version (v${bundle.version}). Update this app first.`;
+  if (!Array.isArray(bundle.athletes)) return 'Backup has no athletes array.';
+  return null;
+}
+
 // POST /api/backup/import — merge a bundle in. Idempotent; returns what was actually added.
 backupRouter.post('/backup/import', (req, res) => {
   const bundle = req.body as { app?: string; version?: number; athletes?: BundleAthlete[] };
-  if (!bundle || bundle.app !== BACKUP_APP) {
-    return res.status(400).json({ error: 'Not a Living Sculpture backup file.' });
-  }
-  if (Number(bundle.version) > BACKUP_VERSION) {
-    return res.status(400).json({ error: `That backup was written by a newer version (v${bundle.version}). Update this app first.` });
-  }
-  if (!Array.isArray(bundle.athletes)) return res.status(400).json({ error: 'Backup has no athletes array.' });
+  const err = bundleError(bundle);
+  if (err) return res.status(400).json({ error: err });
+  res.json({ ok: true, added: importInto(bundle.athletes!, false) });
+});
 
+// POST /api/backup/apply — cloud sync: { bundle, deletions } from an already-merged cloud copy
+// (client/src/lib/sync/syncDoc.ts). Existing records are updated to match, then deletions applied.
+backupRouter.post('/backup/apply', (req, res) => {
+  const { bundle, deletions } = (req.body ?? {}) as { bundle?: { app?: string; version?: number; athletes?: BundleAthlete[] }; deletions?: unknown };
+  const err = bundleError(bundle ?? null);
+  if (err) return res.status(400).json({ error: err });
+  if (!Array.isArray(deletions)) return res.status(400).json({ error: 'deletions must be a list' });
+  const added = importInto(bundle!.athletes!, true);
+  res.json({ ok: true, added, deleted: applyDeletions(deletions) });
+});
+
+function unlinkMedia(m: { file_name: string; thumb_name: string | null }) {
+  for (const p of [safeMediaName(m.file_name) && path.join(MEDIA_DIR, m.file_name), safeMediaName(m.thumb_name) && path.join(THUMB_DIR, m.thumb_name!)]) {
+    if (p && fs.existsSync(p)) try { fs.unlinkSync(p); } catch { /* ignore */ }
+  }
+}
+
+function applyDeletions(list: unknown[]): number {
+  let n = 0;
+  for (const d of list as { kind?: string; key?: unknown }[]) {
+    if (!Array.isArray(d?.key) || !d.key.every((k) => typeof k === 'string')) continue;
+    const [k1, k2, k3] = d.key as string[];
+    const athlete = () => qGet<{ id: number }>('SELECT id FROM athletes WHERE lower(trim(name)) = ?', [k1])?.id;
+    let r = 0;
+    if (d.kind === 'athletes') {
+      const id = athlete();
+      if (id == null) continue;
+      for (const m of qAll<MediaRow>('SELECT * FROM media_assets WHERE athlete_id = ?', [id])) unlinkMedia(m);
+      r = Number(qRun('DELETE FROM athletes WHERE id = ?', [id]).changes);
+    } else if (d.kind === 'media') {
+      const m = qGet<MediaRow>('SELECT * FROM media_assets WHERE file_name = ?', [k1]);
+      if (!m) continue;
+      unlinkMedia(m);
+      r = Number(qRun('DELETE FROM media_assets WHERE id = ?', [m.id]).changes);
+    } else if (d.kind === 'analyses') {
+      r = Number(qRun('DELETE FROM pose_analyses WHERE media_id = (SELECT id FROM media_assets WHERE file_name = ?) AND source = ? AND created_at = ?', [k1, k2, k3]).changes);
+    } else if (d.kind === 'bodycomp') {
+      const id = athlete();
+      if (id == null) continue;
+      r = Number(qRun("DELETE FROM body_comp_entries WHERE athlete_id = ? AND measured_at = ? AND COALESCE(source, 'manual') = ?", [id, k2, k3]).changes);
+    }
+    n += r;
+  }
+  return n;
+}
+
+/** Insert-if-absent on natural keys; with `upsert`, a record that exists is updated to match too. */
+function importInto(athletes: BundleAthlete[], upsert: boolean) {
   const added = { athletes: 0, media: 0, analyses: 0, bodycomp: 0 };
-  for (const a of bundle.athletes) {
+  for (const a of athletes) {
     const name = String(a?.name ?? '').trim();
     if (!name) continue;
     // Athlete identity is the name — a local, single-user library where two same-named athletes are
@@ -69,6 +121,10 @@ backupRouter.post('/backup/import', (req, res) => {
         ]).lastInsertRowid
       );
       added.athletes++;
+    } else if (upsert) {
+      qRun('UPDATE athletes SET name = ?, category = COALESCE(?, category), height_cm = ?, notes = ? WHERE id = ?', [
+        name, a.category || null, a.height_cm ?? null, a.notes ?? null, athleteId,
+      ]);
     }
 
     for (const m of a.media ?? []) {
@@ -88,11 +144,25 @@ backupRouter.post('/backup/import', (req, res) => {
           ).lastInsertRowid
         );
         added.media++;
+      } else if (upsert) {
+        // the photo may have moved to another athlete (a rename on the other device)
+        qRun('UPDATE media_assets SET athlete_id = ?, captured_at = COALESCE(?, captured_at), pose_type = ?, division = ?, notes = ? WHERE id = ?', [
+          athleteId, m.captured_at || null, m.pose_type ?? null, m.division ?? null, m.notes ?? null, mediaId,
+        ]);
+        qRun('UPDATE pose_analyses SET athlete_id = ? WHERE media_id = ?', [athleteId, mediaId]);
       }
       for (const an of m.analyses ?? []) {
         const dupe = qGet<{ id: number }>('SELECT id FROM pose_analyses WHERE media_id = ? AND source = ? AND created_at = ?', [
           mediaId, an.source, an.created_at,
         ]);
+        if (dupe && upsert) {
+          qRun(
+            `UPDATE pose_analyses SET pose_type = ?, form_score = ?, symmetry_score = ?, ref_match_score = ?, confidence = ?,
+               metrics_json = ?, landmarks_json = ?, ai_feedback_json = ? WHERE id = ?`,
+            [an.pose_type ?? null, an.form_score ?? null, an.symmetry_score ?? null, an.ref_match_score ?? null, an.confidence ?? null,
+              an.metrics_json ?? null, an.landmarks_json ?? null, an.ai_feedback_json ?? null, dupe.id]
+          );
+        }
         if (dupe) continue;
         qRun(
           `INSERT INTO pose_analyses(media_id, athlete_id, source, pose_type, form_score, symmetry_score, ref_match_score,
@@ -113,6 +183,11 @@ backupRouter.post('/backup/import', (req, res) => {
       const dupe = qGet<{ id: number }>('SELECT id FROM body_comp_entries WHERE athlete_id = ? AND measured_at = ? AND source = ?', [
         athleteId, b.measured_at, b.source || 'manual',
       ]);
+      if (dupe && upsert) {
+        qRun('UPDATE body_comp_entries SET weight = ?, weight_unit = ?, body_fat_pct = ?, lean_mass = ?, measurements_json = ?, notes = ? WHERE id = ?', [
+          b.weight ?? null, b.weight_unit ?? 'kg', b.body_fat_pct ?? null, b.lean_mass ?? null, b.measurements_json ?? null, b.notes ?? null, dupe.id,
+        ]);
+      }
       if (dupe) continue;
       qRun(
         `INSERT INTO body_comp_entries(athlete_id, measured_at, weight, weight_unit, body_fat_pct, lean_mass, measurements_json, source, notes, created_at)
@@ -125,8 +200,8 @@ backupRouter.post('/backup/import', (req, res) => {
       added.bodycomp++;
     }
   }
-  res.json({ ok: true, added });
-});
+  return added;
+}
 
 // Which media files this server already has on disk — lets the client upload/download only the gap.
 backupRouter.get('/backup/media-manifest', (_req, res) => {

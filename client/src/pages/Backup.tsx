@@ -2,25 +2,18 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp } from '../state/store';
 import { PageHead } from '../components/Layout';
 import { Icon } from '../components/Icon';
-import {
-  SYNC_PROVIDERS,
-  getSyncProvider,
-  getDriveProfile,
-  driveOriginAllowed,
-  BUILTIN_DRIVE_CLIENT_ID,
-  type SyncConfig,
-} from '../lib/sync/syncProviders';
-import { backupToProvider, restoreFromProvider, syncWithProvider } from '../lib/sync/syncManager';
+import { cloud, syncOnce, store, loadSyncConfig, saveSyncConfig, type SyncConfig } from '../lib/sync/syncManager';
 import { IS_STATIC } from '../api';
 import { storageEstimate } from '../lib/local/store';
 import { eraseEverything } from '../lib/local/erase';
 import { t, fmt } from '../lib/i18n';
+import { localDay } from '../../../server/src/lib/localDay';
 
 async function confirmErase(toast: (m: string) => void) {
   const ok = window.confirm(
     t('Erase everything this app stores on this device — athletes, photos, video, analyses, measurements and settings?') +
       '\n\n' +
-      t('Cloud sync is disconnected. Your Google Drive / sync-folder copy is NOT touched, so you can restore from it later.') +
+      t('Cloud sync is disconnected. Your cloud copy is NOT touched, so you can restore from it later.') +
       '\n\n' +
       t('This cannot be undone.')
   );
@@ -33,25 +26,25 @@ async function confirmErase(toast: (m: string) => void) {
   }
 }
 
-const CFG_KEY = 'ls.sync';
-
-function loadCfg(): SyncConfig {
-  try {
-    const raw = JSON.parse(localStorage.getItem(CFG_KEY) || '{}') as Partial<SyncConfig>;
-    return { provider: raw.provider || 'googleDrive', driveClientId: raw.driveClientId || '', auto: !!raw.auto, media: raw.media !== false, lastSync: raw.lastSync || 0 };
-  } catch {
-    return { provider: 'googleDrive', driveClientId: '', auto: false, media: true, lastSync: 0 };
-  }
+/** Save the reader's own copy as a file (house standard 6). */
+async function downloadBackup(): Promise<number> {
+  const blob = new Blob([JSON.stringify(await store.exportBundle())], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `living-sculpture-backup-${localDay()}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  return blob.size;
 }
 
 export function Backup() {
   const { toast, refreshAthletes } = useApp();
-  const [cfg, setCfg] = useState<SyncConfig>(loadCfg);
+  const [cfg, setCfg] = useState<SyncConfig>(loadSyncConfig);
   const [busy, setBusy] = useState<string | null>(null);
   const [progress, setProgress] = useState<string>('');
-  const [profile, setProfile] = useState(getDriveProfile());
   const [storage, setStorage] = useState<{ usage: number; quota: number; persisted: boolean } | null>(null);
-  const didBoot = useRef(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const c = cloud();
 
   useEffect(() => {
     if (IS_STATIC) storageEstimate().then(setStorage);
@@ -59,11 +52,8 @@ export function Backup() {
 
   const save = useCallback((next: SyncConfig) => {
     setCfg(next);
-    localStorage.setItem(CFG_KEY, JSON.stringify(next));
+    saveSyncConfig(next);
   }, []);
-
-  const provider = getSyncProvider(cfg.provider);
-  const gate = provider?.available(cfg) ?? { ok: false as const, reason: t('Unknown target.') };
 
   const onProgress = (done: number, total: number) => setProgress(total ? t('media {done}/{total}', { done, total }) : '');
 
@@ -73,9 +63,7 @@ export function Backup() {
       setProgress('');
       try {
         const msg = await fn();
-        const next = { ...cfg, lastSync: Date.now() };
-        save(next);
-        setProfile(getDriveProfile());
+        setCfg(loadSyncConfig());
         await refreshAthletes();
         toast(msg);
       } catch (err) {
@@ -85,33 +73,25 @@ export function Backup() {
         setProgress('');
       }
     },
-    [cfg, save, toast, refreshAthletes]
+    [toast, refreshAthletes]
   );
 
   const doSync = () =>
     run('sync', async () => {
-      const r = await syncWithProvider(cfg.provider, cfg, { onProgress });
-      const a = r.added;
-      const gained = a ? a.athletes + a.media + a.analyses + a.bodycomp : 0;
+      const r = await syncOnce({ media: cfg.media, onProgress });
       const m = r.media ? ' · ' + t('media ↑{up} ↓{down}', { up: r.media.uploaded, down: r.media.downloaded }) : '';
-      return (gained ? t.n('Synced — pulled {n} new record', 'Synced — pulled {n} new records', gained) : t('Synced — already up to date')) + m;
+      return (r.pulled ? t('Synced — brought in changes from your other devices') : t('Synced — already up to date')) + m;
     });
 
-  // Boot auto-sync: silent only — reuses an existing grant, never pops a sign-in on a timer.
-  useEffect(() => {
-    if (didBoot.current || !cfg.auto || !provider || gate !== true) return;
-    didBoot.current = true;
-    (async () => {
-      try {
-        await syncWithProvider(cfg.provider, cfg, { silent: true, onProgress });
-        save({ ...cfg, lastSync: Date.now() });
-        await refreshAthletes();
-      } catch {
-        /* offline or no prior grant — press “Sync now” once to grant */
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const restoreFile = (f: File) =>
+    run('restore', async () => {
+      const { parseJSON } = (window as unknown as { appFont?: { parseJSON?: (s: string, max: number) => unknown } }).appFont ?? {};
+      const text = await f.text();
+      const bundle = parseJSON ? parseJSON(text, 512e6) : JSON.parse(text);
+      if (!bundle) throw new Error(t('Not a Living Sculpture backup file.'));
+      await store.importBundle(bundle);
+      return t('Restored — anything already here was kept');
+    });
 
   return (
     <div>
@@ -148,42 +128,12 @@ export function Backup() {
 
       <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 22, alignItems: 'start' }}>
         <div className="card">
-          <p className="kicker" style={{ marginBottom: 14 }}>{t('Target')}</p>
-
-          <label className="field">
-            <span className="lab">{t('Sync to')}</span>
-            <select value={cfg.provider} onChange={(e) => save({ ...cfg, provider: e.target.value })}>
-              {SYNC_PROVIDERS.map((p) => (
-                <option key={p.id} value={p.id} disabled={!p.supported()}>
-                  {p.supported() ? t(p.label) : t('{label} — not supported in this browser', { label: t(p.label) })}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {cfg.provider === 'googleDrive' && (
-            <>
-              {!driveOriginAllowed() && (
-                <label className="field">
-                  <span className="lab">{t('Google OAuth client ID')}</span>
-                  <input
-                    value={cfg.driveClientId || ''}
-                    placeholder="…apps.googleusercontent.com"
-                    onChange={(e) => save({ ...cfg, driveClientId: e.target.value })}
-                  />
-                  <span className="tiny muted">
-                    {t('This deployment isn’t on an authorized origin, so it needs its own client ID (Google Cloud → Credentials → OAuth client → Web application).')}
-                  </span>
-                </label>
-              )}
-              {profile && (
-                <div className="row" style={{ gap: 10, marginBottom: 12 }}>
-                  {profile.picture && <img src={profile.picture} alt="" className="avatar" style={{ width: 28, height: 28 }} />}
-                  <span className="tiny muted">{t('Signed in as {who}', { who: profile.email || profile.name })}</span>
-                </div>
-              )}
-            </>
-          )}
+          <p className="kicker" style={{ marginBottom: 14 }}>{t('Cloud')}</p>
+          <p className="tiny muted" style={{ marginBottom: 12 }}>
+            {c
+              ? t('Syncs with {cloud}, the cloud you chose for all these apps on the hub.', { cloud: c.label() })
+              : t('Cloud sync is not available (the shared house script did not load).')}
+          </p>
 
           <label className="row" style={{ gap: 8, marginBottom: 10, cursor: 'pointer' }}>
             <input type="checkbox" checked={!!cfg.media} style={{ width: 'auto' }} onChange={(e) => save({ ...cfg, media: e.target.checked })} />
@@ -194,34 +144,32 @@ export function Backup() {
             <span className="tiny">{t('Sync automatically when the app starts')}</span>
           </label>
 
-          {gate !== true && <p className="banner" style={{ marginBottom: 14 }}>{gate.reason}</p>}
-
-          <button className="btn primary" style={{ width: '100%', marginBottom: 8 }} onClick={doSync} disabled={!!busy || gate !== true}>
+          <button className="btn primary" style={{ width: '100%', marginBottom: 8 }} onClick={doSync} disabled={!!busy || !c}>
             <Icon name="timelapse" size={14} /> {busy === 'sync' ? progress || t('Syncing…') : t('Sync now')}
           </button>
           <div className="row" style={{ gap: 8 }}>
             <button
               className="btn"
               style={{ flex: 1 }}
-              disabled={!!busy || gate !== true}
-              onClick={() => run('backup', async () => t('Backed up ({size})', { size: fmt.unit(Math.ceil((await backupToProvider(cfg.provider, cfg)).bytes / 1024), 'kilobyte', 0) }))}
+              disabled={!!busy}
+              onClick={() => run('backup', async () => t('Backed up ({size})', { size: fmt.unit(Math.ceil((await downloadBackup()) / 1024), 'kilobyte', 0) }))}
             >
-              {t('Back up only')}
+              {t('Download a backup file')}
             </button>
-            <button
-              className="btn"
-              style={{ flex: 1 }}
-              disabled={!!busy || gate !== true}
-              onClick={() =>
-                run('restore', async () => {
-                  const a = (await restoreFromProvider(cfg.provider, cfg)).added;
-                  const n = a ? a.athletes + a.media + a.analyses + a.bodycomp : 0;
-                  return n ? t.n('Restored {n} record', 'Restored {n} records', n) : t('Nothing new to restore');
-                })
-              }
-            >
-              {t('Restore only')}
+            <button className="btn" style={{ flex: 1 }} disabled={!!busy} onClick={() => fileInput.current?.click()}>
+              {t('Restore from a file')}
             </button>
+            <input
+              ref={fileInput}
+              type="file"
+              accept="application/json,.json"
+              hidden
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = '';
+                if (f) restoreFile(f);
+              }}
+            />
           </div>
           {cfg.lastSync ? (
             <p className="tiny muted mono" style={{ marginTop: 12 }}>{t('Last sync: {when}', { when: fmt.dateTime(new Date(cfg.lastSync)) })}</p>
@@ -231,8 +179,8 @@ export function Backup() {
         <div className="card">
           <p className="kicker" style={{ marginBottom: 14 }}>{t('What travels')}</p>
           <p style={{ fontSize: 14, color: 'var(--text-dim)', marginBottom: 12 }}>
-            {t('Google Drive sync writes to a')} <b>{t('private app folder')}</b>{' '}
-            {t('— a hidden area of your Drive that only this app can read. It can’t see the rest of your Drive, and your photos never touch a server of ours: your browser talks to Google directly.')}
+            {t('Sync writes to a')} <b>{t('private app folder')}</b>{' '}
+            {t('— a hidden area of your cloud that only these apps can read. It can’t see the rest of your files, and your photos never touch a server of ours: your browser talks to your cloud directly.')}
           </p>
           <table className="data">
             <tbody>
@@ -242,13 +190,8 @@ export function Backup() {
             </tbody>
           </table>
           <p className="tiny muted" style={{ marginTop: 14 }}>
-            {t('Merging is by natural key — the same backup applied twice changes nothing, and two devices converge rather than overwrite each other. Media files are immutable, so they’re only ever copied to the side that’s missing them.')}
+            {t('Sync merges record by record: the newest change to each athlete, photo, analysis or measurement wins, and a deletion on one device stays deleted on the others. No device ever overwrites newer data with an older copy. Media files are immutable, so they’re only ever copied to the side that’s missing them.')}
           </p>
-          {cfg.provider === 'googleDrive' && driveOriginAllowed() && (
-            <p className="tiny muted mono" style={{ marginTop: 12, wordBreak: 'break-all' }}>
-              {t('client: {id}…', { id: (cfg.driveClientId || BUILTIN_DRIVE_CLIENT_ID).slice(0, 28) })}
-            </p>
-          )}
         </div>
       </div>
 
@@ -256,7 +199,7 @@ export function Backup() {
         <div className="card" style={{ marginTop: 22 }}>
           <p className="kicker" style={{ marginBottom: 10 }}>{t('Erase this device')}</p>
           <p className="tiny muted" style={{ marginBottom: 12 }}>
-            {t('Removes everything this app keeps in this browser and disconnects sync. Your Drive or sync-folder copy is not touched. Other apps on this site keep their data.')}
+            {t('Removes everything this app keeps in this browser and disconnects sync. Your cloud copy is not touched. Other apps on this site keep their data.')}
           </p>
           <button className="btn" disabled={!!busy} onClick={() => confirmErase(toast)}>{t('Erase everything…')}</button>
         </div>

@@ -22,6 +22,7 @@ app.use(cors());
 app.use('/api/backup/media-file', express.raw({ type: '*/*', limit: '250mb' }));
 // A whole-library backup (landmarks for every analysis) far exceeds the 2mb default.
 app.use('/api/backup/import', express.json({ limit: '256mb' }));
+app.use('/api/backup/apply', express.json({ limit: '256mb' }));
 app.use(express.json({ limit: '2mb' }));
 
 // Static media + the original style guides (read-only reference).

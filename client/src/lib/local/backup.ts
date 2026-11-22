@@ -4,7 +4,7 @@
  * columns, same UUID media names. That means a backup taken from the self-hosted server restores
  * into the Pages app and vice versa; Drive sync becomes the bridge between them.
  */
-import { tx, get, getAll, put, byIndex, now } from './store';
+import { tx, get, getAll, put, del, byIndex, now, thumbKey, forgetBlobUrl } from './store';
 import { safeMediaName } from '../../../../server/src/lib/safeName';
 import { localDay } from '../../../../server/src/lib/localDay';
 import { t } from '../i18n';
@@ -66,8 +66,11 @@ export async function exportBundle(): Promise<unknown> {
 
 export interface ImportCounts { athletes: number; media: number; analyses: number; bodycomp: number }
 
-/** Insert-if-absent on the same natural keys the server uses, so imports are idempotent. */
-export async function importBundle(bundle: unknown): Promise<ImportCounts> {
+/**
+ * Insert-if-absent on the same natural keys the server uses, so imports are idempotent. With
+ * `upsert` (cloud sync applying an already-merged copy) a record that exists is updated to match too.
+ */
+export async function importBundle(bundle: unknown, opts: { upsert?: boolean } = {}): Promise<ImportCounts> {
   const b = bundle as { app?: string; version?: number; athletes?: Record<string, unknown>[] };
   if (!b || b.app !== BACKUP_APP) throw new Error(t('Not a Living Sculpture backup file.'));
   if (Number(b.version) > BACKUP_VERSION) throw new Error(t('That backup was written by a newer version (v{version}). Update this app first.', { version: String(b.version) }));
@@ -93,13 +96,23 @@ export async function importBundle(bundle: unknown): Promise<ImportCounts> {
           })
         );
         added.athletes++;
+      } else if (opts.upsert) {
+        const cur = all.find((x) => x.id === athleteId)!;
+        await put(t, 'athletes', { ...cur, name, category: a.category || cur.category, height_cm: a.height_cm ?? null, notes: a.notes ?? null });
       }
 
       const existingMedia = await getAll<Row>(t, 'media');
       for (const m of (a.media as Record<string, unknown>[]) ?? []) {
         const fileName = safeMediaName(m?.file_name);
         if (!fileName) continue;
-        let mediaId = existingMedia.find((x) => x.file_name === fileName)?.id;
+        const curMedia = existingMedia.find((x) => x.file_name === fileName);
+        let mediaId = curMedia?.id;
+        if (curMedia && opts.upsert) {
+          // the photo may have moved to another athlete (a rename on the other device)
+          await put(t, 'media', { ...curMedia, athlete_id: athleteId, captured_at: m.captured_at || curMedia.captured_at,
+            pose_type: m.pose_type ?? null, division: m.division ?? null, notes: m.notes ?? null });
+          for (const an of await byIndex<Row>(t, 'analyses', 'media_id', curMedia.id)) if (an.athlete_id !== athleteId) await put(t, 'analyses', { ...an, athlete_id: athleteId });
+        }
         if (!mediaId) {
           mediaId = Number(
             await put(t, 'media', {
@@ -121,8 +134,10 @@ export async function importBundle(bundle: unknown): Promise<ImportCounts> {
         }
         const mine = await byIndex<Row>(t, 'analyses', 'media_id', mediaId);
         for (const an of (m.analyses as Record<string, unknown>[]) ?? []) {
-          if (mine.some((x) => x.source === an.source && x.created_at === an.created_at)) continue;
+          const same = mine.find((x) => x.source === an.source && x.created_at === an.created_at);
+          if (same && !opts.upsert) continue;
           await put(t, 'analyses', {
+            ...(same ? { id: same.id } : {}),
             media_id: mediaId,
             athlete_id: athleteId,
             source: an.source || 'geometry',
@@ -136,7 +151,7 @@ export async function importBundle(bundle: unknown): Promise<ImportCounts> {
             ai_feedback: parse(an.ai_feedback_json, null),
             created_at: an.created_at || now(),
           });
-          added.analyses++;
+          if (!same) added.analyses++;
         }
       }
 
@@ -144,8 +159,10 @@ export async function importBundle(bundle: unknown): Promise<ImportCounts> {
       for (const c of (a.bodycomp as Record<string, unknown>[]) ?? []) {
         if (!c?.measured_at) continue;
         const source = c.source || 'manual';
-        if (comps.some((x) => x.measured_at === c.measured_at && x.source === source)) continue;
+        const same = comps.find((x) => x.measured_at === c.measured_at && x.source === source);
+        if (same && !opts.upsert) continue;
         await put(t, 'bodycomp', {
+          ...(same ? { id: same.id } : {}),
           athlete_id: athleteId,
           measured_at: c.measured_at,
           weight: c.weight ?? null,
@@ -157,11 +174,53 @@ export async function importBundle(bundle: unknown): Promise<ImportCounts> {
           notes: c.notes ?? null,
           created_at: c.created_at || now(),
         });
-        added.bodycomp++;
+        if (!same) added.bodycomp++;
       }
     });
   }
   return added;
+}
+
+/** Remove what another device deleted, by the natural keys of syncDoc.ts (Deletion.key). */
+export async function applyDeletions(deletions: { kind: string; key: string[] }[]): Promise<number> {
+  let n = 0;
+  const forget: string[] = [];
+  await tx(['athletes', 'media', 'analyses', 'bodycomp', 'blobs'], 'readwrite', async (t) => {
+    const athletes = await getAll<Row>(t, 'athletes');
+    const athleteId = (k: string) => athletes.find((a) => String(a.name).trim().toLowerCase() === k)?.id;
+    const dropMedia = async (m: Row) => {
+      for (const a of await byIndex<Row>(t, 'analyses', 'media_id', m.id)) await del(t, 'analyses', a.id);
+      for (const b of [m.file_name, m.thumb_name && thumbKey(String(m.thumb_name)), m.thumb_name]) if (b) { await del(t, 'blobs', String(b)); forget.push(String(b)); }
+      await del(t, 'media', m.id);
+    };
+    for (const d of deletions) {
+      const [k1, k2, k3] = d.key;
+      if (d.kind === 'athletes') {
+        const id = athleteId(k1);
+        if (id == null) continue;
+        for (const m of await byIndex<Row>(t, 'media', 'athlete_id', id)) await dropMedia(m);
+        for (const b of await byIndex<Row>(t, 'bodycomp', 'athlete_id', id)) await del(t, 'bodycomp', b.id);
+        await del(t, 'athletes', id);
+      } else if (d.kind === 'media') {
+        const m = (await byIndex<Row>(t, 'media', 'file_name', k1))[0];
+        if (!m) continue;
+        await dropMedia(m);
+      } else if (d.kind === 'analyses') {
+        const m = (await byIndex<Row>(t, 'media', 'file_name', k1))[0];
+        const an = m && (await byIndex<Row>(t, 'analyses', 'media_id', m.id)).find((x) => x.source === k2 && x.created_at === k3);
+        if (!an) continue;
+        await del(t, 'analyses', an.id);
+      } else if (d.kind === 'bodycomp') {
+        const id = athleteId(k1);
+        const b = id == null ? null : (await byIndex<Row>(t, 'bodycomp', 'athlete_id', id)).find((x) => x.measured_at === k2 && (x.source || 'manual') === k3);
+        if (!b) continue;
+        await del(t, 'bodycomp', b.id);
+      } else continue;
+      n++;
+    }
+  });
+  forget.forEach(forgetBlobUrl);
+  return n;
 }
 
 /** Which media blobs this browser holds, and which its rows reference but lack. */

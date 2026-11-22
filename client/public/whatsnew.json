@@ -1,5 +1,13 @@
 [
  {
+  "date": "2026-11-22",
+  "items": [
+   "Sync no longer overwrites: each athlete, photo, analysis and measurement is merged on its own, so the newest change wins and something you delete on one device stays deleted on the others. An old phone that was offline for a week can no longer undo newer work.",
+   "Sync now uses the cloud you chose on the hub for all these apps, and runs by itself when you open the app or come back to it (turn on \"Sync automatically\"). The \"local folder\" sync option is gone.",
+   "Back up and restore now use a file: Download a backup file, and Restore from a file, on the Backup page."
+  ]
+ },
+ {
   "date": "2026-11-21",
   "items": [
    "Your AI judge now looks at the photos themselves, not just body landmarks: each posing photo gets a grade and a 0-10 score for muscularity, conditioning, symmetry, proportion, presentation and execution, plus the body parts that lag. Side poses get graded too. It leads in Pose Studio; the geometry measurement stays below it as a check.",

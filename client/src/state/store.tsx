@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { api } from '../api';
 import type { Athlete } from '../lib/types';
 import { followTheme } from '../lib/theme';
+import { startAutoSync } from '../lib/sync/syncManager';
 
 interface AppState {
   athletes: Athlete[];
@@ -54,6 +55,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // The page theme: the reader's choice from the shared list, or (System) the device's dark/light.
   useEffect(followTheme, []);
+
+  // Cloud sync on start, focus and reconnect, when the reader turned it on (Backup page).
+  useEffect(() => startAutoSync(() => void refreshAthletes()), [refreshAthletes]);
 
   const selectAthlete = useCallback((id: number | null) => {
     setCurrentId(id);
